@@ -8,9 +8,10 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 import seaborn as sns
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
@@ -926,59 +927,55 @@ with tab1:
             /* Bouncing animation across both axes */
             @keyframes bounceXY {
                 0%   { transform: translate(0%, 0%); }
-                25%  { transform: translate(80%, 0%); }
-                50%  { transform: translate(80%, 80%); }
-                75%  { transform: translate(0%, 80%); }
+                50%  { transform: translate(-120%, 0%); }
                 100% { transform: translate(0%, 0%); }
             }
             </style>
         """, unsafe_allow_html=True)
-        
-        
         
         # --- First Row of KPI Cards ---
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.markdown("<div class='card'><h4>🎤 Artist Concentration</h4></div>", unsafe_allow_html=True)
             st.metric("Index", f"{filtered_artist_concentration_index:.2f}%",
-                      f"{filtered_artist_concentration_index - artist_concentration_index:.2f}%" if is_any_filter_different else None)
+                    f"{filtered_artist_concentration_index - artist_concentration_index:.2f}%" if is_any_filter_different else None)
     
         with col2:
             st.markdown("<div class='card'><h4>🌐 Diversity Score</h4></div>", unsafe_allow_html=True)
             st.metric("Score", f"{filtered_diversity_score:.4f}",
-                      f"{filtered_diversity_score - diversity_score:.4f}" if is_any_filter_different else None)
+                    f"{filtered_diversity_score - diversity_score:.4f}" if is_any_filter_different else None)
     
         with col3:
             st.markdown("<div class='card'><h4>🔞 Explicit Content</h4></div>", unsafe_allow_html=True)
             st.metric("Percentage", f"{filtered_explicitness_percentage.get(True, 0):.2f}%",
-                      f"{filtered_explicitness_percentage.get(True, 0) - explicitness_percentage.get(True, 0):.2f}%" if is_any_filter_different else None)
+                    f"{filtered_explicitness_percentage.get(True, 0) - explicitness_percentage.get(True, 0):.2f}%" if is_any_filter_different else None)
     
         with col4:
             st.markdown("<div class='card'><h4>⏱️ Avg Duration</h4></div>", unsafe_allow_html=True)
             st.metric("Minutes", f"{present_avg_duration:.2f}",
-                      f"{present_avg_duration - overall_avg_duration:.2f}" if is_any_filter_different else None)
+                    f"{present_avg_duration - overall_avg_duration:.2f}" if is_any_filter_different else None)
     
         # --- Second Row of KPI Cards ---
         col5, col6, col7, col8 = st.columns(4)
         with col5:
             st.markdown("<div class='card'><h4>🤝 Avg Artists/Track</h4></div>", unsafe_allow_html=True)
             st.metric("Avg Artists per Track", f"{filtered_track_collaborations['num_artists'].mean():.2f}",
-                      f"{filtered_track_collaborations['num_artists'].mean() - average_artists_per_track:.2f}" if is_any_filter_different else None)
+                    f"{filtered_track_collaborations['num_artists'].mean() - average_artists_per_track:.2f}" if is_any_filter_different else None)
     
         with col6:
             st.markdown("<div class='card'><h4>📊 Top 10 Collabs</h4></div>", unsafe_allow_html=True)
             st.metric("Top 10 Collaboration %", f"{filtered_collaboration_frequency_by_rank.get('Top 10', 0):.2f}%",
-                      f"{filtered_collaboration_frequency_by_rank.get('Top 10', 0) - collaboration_frequency_by_rank.get('Top 10', 0):.2f}%" if is_any_filter_different else None)
+                    f"{filtered_collaboration_frequency_by_rank.get('Top 10', 0) - collaboration_frequency_by_rank.get('Top 10', 0):.2f}%" if is_any_filter_different else None)
     
         with col7:
             st.markdown("<div class='card'><h4>💿 Singles Share</h4></div>", unsafe_allow_html=True)
             st.metric("Singles Share %", f"{filtered_album_type_percentage.get('single', 0):.2f}%",
-                      f"{filtered_album_type_percentage.get('single', 0) - album_type_percentage.get('single', 0):.2f}%" if is_any_filter_different else None)
+                    f"{filtered_album_type_percentage.get('single', 0) - album_type_percentage.get('single', 0):.2f}%" if is_any_filter_different else None)
     
         with col8:
             st.markdown("<div class='card'><h4>📀 Albums Share</h4></div>", unsafe_allow_html=True)
             st.metric("Albums Share %", f"{filtered_album_type_percentage.get('album', 0):.2f}%",
-                      f"{filtered_album_type_percentage.get('album', 0) - album_type_percentage.get('album', 0):.2f}%" if is_any_filter_different else None)
+                    f"{filtered_album_type_percentage.get('album', 0) - album_type_percentage.get('album', 0):.2f}%" if is_any_filter_different else None)
     
         st.divider()
     
@@ -1022,12 +1019,10 @@ with tab1:
     
         
     with tabs[7]:
-        st.subheader('Executive Summary and KPIs')
-        
-        st.write("#### Comprehensive UK Music Market Analysis")
-        st.write("This dashboard analyzes the UK music market by comparing the current filter view against the full dataset baseline to show how the selected subset differs from the overall market.")
-        
         st.subheader("📊 Key Insights and Findings")
+        
+        with st.expander("#### Comprehensive UK Music Market Analysis"):
+            st.info("This dashboard analyzes the UK music market by comparing the current filter view against the full dataset baseline to show how the selected subset differs from the overall market.")
         
         # 1. Artist Dominance and Diversity
         with st.container():
@@ -1287,7 +1282,7 @@ with tab1:
         
         st.markdown("---")
 
-# --- 1. Initial Data Loading and Preprocessing (from Section IX) ---
+# --- 1. Initial Data Loading and Preprocessing ---
 print("Dashboard created successfully with basic Streamlit structure. Please wait for some time (about 3-4 mins) to get the advanced Streamlit structure with recommendations & conclusion.")
 print("--- Starting Data Preparation and Model Training For Recommendational Analysis ---")
 
@@ -1320,7 +1315,7 @@ df_merged['popularity_bucket'] = pd.qcut(df_merged['popularity'], q=4, labels=['
 
 print("df_merged and its derived columns have been successfully re-created.")
 
-# --- 2. Feature Engineering (from Section XII) ---
+# --- 2. Feature Engineering ---
 # Convert 'date' to datetime objects
 df_merged['date'] = pd.to_datetime(df_merged['date'], dayfirst=True)
 
@@ -1336,7 +1331,8 @@ df_merged['explicit_duration'] = df_merged['is_explicit'] * df_merged['duration_
 
 print("Engineered features 'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration' created.")
 
-# --- 3. Predictive Modeling - Logistic Regression (from Section IX) ---
+# --- 3.0 Predictive Modeling for Chart Success (No Engineering Features) ---
+# Model 1: Logistic Regression
 # Define the target variable: Chart Success (Top 10 vs. not Top 10)
 df_merged['chart_success'] = (df_merged['position'] <= 10).astype(int)
 
@@ -1348,32 +1344,48 @@ df_temp_lr = df_merged[features_lr + categorical_features_lr].copy()
 X_lr = pd.get_dummies(df_temp_lr, columns=categorical_features_lr, drop_first=True)
 y_lr = df_merged['chart_success']
 
-X_train_lr, X_test_lr, y_train_lr, y_test_lr = train_test_split(X_lr, y_lr, test_size=0.2, random_state=42, stratify=y_lr)
+X_train_no_eng, X_test_no_eng, y_train_no_eng, y_test_no_eng = train_test_split(X_lr, y_lr, test_size=0.2, random_state=42, stratify=y_lr)
 
 model_lr = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
-model_lr.fit(X_train_lr, y_train_lr)
-y_pred_lr = model_lr.predict(X_test_lr)
-metrics_df = pd.DataFrame(classification_report(y_test_lr, y_pred_lr, output_dict=True)).transpose()
+model_lr.fit(X_train_no_eng, y_train_no_eng)
+y_pred_lr = model_lr.predict(X_test_no_eng)
+lr_accuracy_no_eng = accuracy_score(y_test_no_eng, y_pred_lr)
+metrics_df = pd.DataFrame(classification_report(y_test_no_eng, y_pred_lr, output_dict=True)).transpose()
 metrics_df = metrics_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
 metrics_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-print("Logistic Regression model trained and metrics calculated.")
+print("Logistic Regression (Without Engineering Features) model trained and metrics calculated.")
 
-# --- 3.1 Predictive Modeling - Random Forest (No Engineered Features) (from Section X) ---
+# --- Module 2: Linear Regression ---
+linear_model_no_eng = LinearRegression()
+linear_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+linear_y_pred_no_eng = linear_model_no_eng.predict(X_test_no_eng)
+Lr_accuracy_no_eng = accuracy_score(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int))
+Lr_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
+Lr_metrics_df_no_eng = Lr_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+Lr_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+
+# --- Model 3: Random Forest (No Engineered Features) ---
 # Use the same feature set as Logistic Regression for comparison without engineered features
-X_rf_no_eng = X_lr.copy()
-y_rf_no_eng = y_lr.copy()
-
-X_train_rf_no_eng, X_test_rf_no_eng, y_train_rf_no_eng, y_test_rf_no_eng = train_test_split(X_rf_no_eng, y_rf_no_eng, test_size=0.2, random_state=42, stratify=y_rf_no_eng)
-
 rf_model_no_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-rf_model_no_eng.fit(X_train_rf_no_eng, y_train_rf_no_eng)
-rf_y_pred_no_eng = rf_model_no_eng.predict(X_test_rf_no_eng)
-rf_metrics_df = pd.DataFrame(classification_report(y_test_rf_no_eng, rf_y_pred_no_eng, output_dict=True)).transpose()
-rf_metrics_df = rf_metrics_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-rf_metrics_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+rf_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+rf_y_pred_no_eng = rf_model_no_eng.predict(X_test_no_eng)
+rf_accuracy_no_eng = accuracy_score(y_test_no_eng, rf_y_pred_no_eng)
+rf_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, rf_y_pred_no_eng, output_dict=True)).transpose()
+rf_metrics_df_no_eng = rf_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+rf_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
 print("Random Forest model (no engineered features) trained and metrics calculated.")
 
-# --- 3.2 Predictive Modeling - Random Forest (With Engineered Features) (from Section XIII) ---
+# --- Model 4: XGBoost (No Engineered Features) ---
+xgb_model_no_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
+    scale_pos_weight=(len(y_train_no_eng) - y_train_no_eng.sum()) / y_train_no_eng.sum()) # Handle class imbalance
+xgb_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+xgb_y_pred_no_eng = xgb_model_no_eng.predict(X_test_no_eng)
+xgb_accuracy_no_eng = accuracy_score(y_test_no_eng, xgb_y_pred_no_eng)
+xgb_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, xgb_y_pred_no_eng, output_dict=True)).transpose()
+xgb_metrics_df_no_eng = xgb_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+xgb_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+
+# --- 3.1 Predictive Modeling For Chart Success (With Engineered Features) ---
 features_engineered_rf = [
     'duration_min', 'num_artists', 'is_explicit',
     'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration'
@@ -1386,19 +1398,81 @@ y_engineered_rf = df_merged['chart_success']
 
 X_train_eng, X_test_eng, y_train_eng, y_test_eng = train_test_split(X_engineered_rf, y_engineered_rf, test_size=0.2, random_state=42, stratify=y_engineered_rf)
 
+# --- Model 1: Logistic Regression ---
+lr_model_eng = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
+lr_model_eng.fit(X_train_eng, y_train_eng)
+lr_y_pred_eng = lr_model_eng.predict(X_test_eng)
+# Calculate accuracy
+lr_accuracy_eng = accuracy_score(y_test_eng, lr_y_pred_eng)
+lr_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, lr_y_pred_eng, output_dict=True)).transpose()
+lr_metrics_eng_df = lr_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+
+# --- Model 2: Linear Regression ---
+Lr_model_eng = LinearRegression()
+Lr_model_eng.fit(X_train_eng, y_train_eng)
+Lr_y_pred_eng = Lr_model_eng.predict(X_test_eng)
+Lr_accuracy_eng = accuracy_score(y_test_eng, (Lr_y_pred_eng> 0.5).astype(int))
+Lr_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, (Lr_y_pred_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
+Lr_metrics_eng_df = Lr_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+Lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+
+# --- Model 3: Random Forest ---
 rf_model_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
 rf_model_eng.fit(X_train_eng, y_train_eng)
 rf_y_pred_eng = rf_model_eng.predict(X_test_eng)
+rf_accuracy_eng = accuracy_score(y_test_eng, rf_y_pred_eng)
 rf_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, rf_y_pred_eng, output_dict=True)).transpose()
 rf_metrics_eng_df = rf_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
 rf_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
 print("Random Forest model (with engineered features) trained and metrics calculated.")
 
-# --- 3.3 Model Comparison DataFrames (from Section XIV) ---
+# --- Model 4: XGBoost ---
+xgb_model_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
+    scale_pos_weight=(len(y_train_eng) - y_train_eng.sum()) / y_train_eng.sum()) # Handle class imbalance
+xgb_model_eng.fit(X_train_eng, y_train_eng)
+xgb_y_pred_eng = xgb_model_eng.predict(X_test_eng)
+xgb_accuracy_eng = accuracy_score(y_test_eng, xgb_y_pred_eng)
+xgb_metrics_df_eng = pd.DataFrame(classification_report(y_test_eng, xgb_y_pred_eng, output_dict=True)).transpose()
+xgb_metrics_df_eng = xgb_metrics_df_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+xgb_metrics_df_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+
+# --- 3.3 Model Comparison DataFrames for All Models ---
+
+def build_comparison_df(metrics_no_eng_df, metrics_eng_df, model_name):
+    comparison_data = []
+    metrics_no_eng_dict = metrics_no_eng_df.to_dict('index')
+    metrics_eng_dict = metrics_eng_df.to_dict('index')
+
+    for class_name_key in metrics_no_eng_dict:
+        metrics = metrics_no_eng_dict[class_name_key]
+        comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+        comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+        comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+
+    for class_name_key in metrics_eng_dict:
+        metrics = metrics_eng_dict[class_name_key]
+        comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+        comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+        comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+
+    return pd.DataFrame(comparison_data)
+
+# Build comparison DataFrames for each model
+lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
+linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
+rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
+xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_df_eng, "XGBoost")
+
+# Combine all into one master comparison DataFrame
+all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df], ignore_index=True)
+
+print("All model comparison dataframe created.")
+
 # Create comparison_df for plotting RF performance with/without engineered features
 comparison_data = []
 
-rf_metrics_no_eng_dict = rf_metrics_df.to_dict('index')
+rf_metrics_no_eng_dict = rf_metrics_df_no_eng.to_dict('index')
 rf_metrics_with_eng_dict = rf_metrics_eng_df.to_dict('index')
 
 for class_name_key in rf_metrics_no_eng_dict:
@@ -1415,21 +1489,16 @@ for class_name_key in rf_metrics_with_eng_dict:
 
 comparison_df = pd.DataFrame(comparison_data)
 
-# Create accuracy_summary_df
-lr_accuracy = accuracy_score(y_test_lr, model_lr.predict(X_test_lr))
-rf_accuracy = accuracy_score(y_test_rf_no_eng, rf_model_no_eng.predict(X_test_rf_no_eng))
-rf_accuracy_eng = accuracy_score(y_test_eng, rf_model_eng.predict(X_test_eng))
-
+# --- 3.4 Model Accuracy Comparison DataFrames to find best model ---
+# Create a DataFrame for the summary table
 accuracy_summary_df = pd.DataFrame({
     'Model': [
-        'Logistic Regression',
-        'Random Forest (No Engineered Features)',
-        'Random Forest (With Engineered Features)'
+        'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
+        'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
+        'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)'
     ],
     'Accuracy': [
-        lr_accuracy,
-        rf_accuracy,
-        rf_accuracy_eng
+        lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng
     ]
 })
 print("Model comparison dataframes created.")
@@ -1582,43 +1651,76 @@ with tab2:
         "📌 Conclusion"
     ])
     with tabs[0]:
-        # --- Recommendation 1: Predictive Modeling of Chart Success ---
         st.subheader("**Predictive Modeling of Chart Success**")
         st.markdown("""
-        Our Random Forest model, especially after careful feature engineering, demonstrated significant
-        predictive power for identifying tracks likely to achieve Top 10 chart success.
+        Explore how different models perform in predicting Top 10 chart success.
+        Use the filter below to select a model and view its performance metrics.
         """)
-        
-        # Display Classification Report (Table)
-        if 'rf_metrics_eng_df' in locals():
-            colA, colB = st.columns(2)
-            st.write("**Random Forest Model Performance Comparison:**")
-            with colA:
-                with st.expander("Random Forest Model Performance (Without Engineered Features):"):
-                    st.dataframe(rf_metrics_df.drop(columns=['support'], errors='ignore'))
-            with colB:
-                with st.expander("Random Forest Model Performance (With Engineered Features):"):
-                    st.dataframe(rf_metrics_eng_df.drop(columns=['support'], errors='ignore'))
-        else:
-            st.warning("`rf_metrics_eng_df` or `rf_metrics_df` not found. Please ensure the predictive modeling section was run.)")
-            
-        # Display Comparison Plot (Chart)
-        if 'comparison_df' in locals():
-            # Recreate the catplot figure for Streamlit
-            g = sns.catplot(x='Metric', y='Score', hue='Model', col='Class', data=comparison_df,
-                                        kind='bar', palette='viridis', errorbar=None, col_wrap=2, height=6, aspect=1.2)
-            g.fig.suptitle('Random Forest Model Performance Comparison: With vs. Without Engineered Features', y=1.02, fontsize=18)
+    
+        # --- Model Selection Filter ---
+        model_choice = st.selectbox(
+            "Select a Model to View Metrics",
+            ["Logistic Regression", "Linear Regression", "Random Forest", "XGBoost"]
+        )
+    
+        # --- Helper function to plot heatmap ---
+        def plot_heatmap(metrics_df, title):
+            fig, ax = plt.subplots(figsize=(6,4))
+            sns.heatmap(metrics_df.drop(columns=['support'], errors='ignore'), 
+                        annot=True, cmap="viridis", fmt=".2f", ax=ax)
+            ax.set_title(title)
+            st.pyplot(fig)
+            plt.close(fig)
+    
+        # --- Dictionary mapping model names to their metric DataFrames ---
+        model_metrics = {
+            "Logistic Regression": (metrics_df, lr_metrics_eng_df, lr_comparison_df),
+            "Linear Regression": (Lr_metrics_df_no_eng, Lr_metrics_eng_df, linear_comparison_df),
+            "Random Forest": (rf_metrics_df_no_eng, rf_metrics_eng_df, rf_comparison_df),
+            "XGBoost": (xgb_metrics_df_no_eng, xgb_metrics_df_eng, xgb_comparison_df)
+        }
+    
+        # Get the correct DataFrames
+        metrics_no_eng, metrics_eng, comparison_df_model = model_metrics[model_choice]
+    
+        # --- Display Classification Report (Heatmaps + Tables) ---
+        colA, colB = st.columns(2)
+        st.write(f"**{model_choice} Model Performance Comparison:**")
+        with colA:
+            with st.expander(f"{model_choice} Performance (Without Engineered Features):"):
+                plot_heatmap(metrics_no_eng, f"{model_choice} (No Features)")
+                st.dataframe(metrics_no_eng.drop(columns=['support'], errors='ignore'))
+        with colB:
+            with st.expander(f"{model_choice} Performance (With Engineered Features):"):
+                plot_heatmap(metrics_eng, f"{model_choice} (Engineered Features)")
+                st.dataframe(metrics_eng.drop(columns=['support'], errors='ignore'))
+    
+        # --- Display Comparison Plot (Chart) ---
+        if comparison_df_model is not None:
+            g = sns.catplot(
+                x='Metric', y='Score', hue='Model', col='Class',
+                data=comparison_df_model, kind='bar', palette='viridis',
+                errorbar=None, col_wrap=2, height=6, aspect=1.2
+            )
+            g.fig.suptitle(f'{model_choice} Performance Comparison: With vs. Without Engineered Features', y=1.08, fontsize=18)
             g.set_axis_labels('Metric', 'Score')
             g.set_titles('Class: {col_name}')
-            plt.ylim(0, 1) # Scores are between 0 and 1
-            plt.tight_layout(rect=(0, 0, 1, 0.98)) # Adjust layout to prevent title overlap
+            # Force legend creation
+            g.add_legend()
+            # Reposition legend: center top, just below title
+            legend = g.fig.legends[0]   # first legend object in the figure
+            legend.set_bbox_to_anchor((0.5, 1.02))   # center horizontally, slightly above plots
+            legend.set_loc("upper center")  
+            plt.ylim(0, 1)
+            plt.tight_layout(rect=(0, 0, 1, 0.95))
             st.pyplot(g.fig)
         else:
-            st.warning("`comparison_df` not found. Please ensure the model comparison section was run.)")
-        
+            st.warning("Comparison DataFrame not found. Please ensure the model comparison section was run.")
+    
+        # --- Fixed Accuracy Comparison Table ---
         if 'accuracy_summary_df' in locals():
             # Summary table of model accuracies
-            with st.expander("**Model Accuracies Summary:**"):
+            with st.expander("📊 Model Accuracy Comparison (All Models)"):
                 st.dataframe(accuracy_summary_df)
         
             # Add the bar chart for model accuracies
@@ -1634,62 +1736,117 @@ with tab2:
             plt.close(fig_accuracy_comp)
         else:
             st.warning("`accuracy_summary_df` not found. Please ensure the model accuracy summary section was run.")
+            
+        import plotly.graph_objects as go
+    
+        # --- Your Plotly figure construction code ---
+        metric_types_to_plot = ['F1-score', 'Precision', 'Recall']
+        metric_color_map = {'F1-score': 'yellow', 'Precision': 'red', 'Recall': 'green'}
         
-        # New 3D F1-score comparison plot
-        with st.expander("**3D Comparison of F1-scores: Logistic Regression vs. Random Forest (Without Engineered Features):**"):
-            if 'metrics_df' in locals() and 'rf_metrics_df' in locals():
-                # Extract F1-scores from the previously generated dataframes
-                lr_f1_c0 = metrics_df.loc['Class 0 (Not Top 10)', 'f1-score']
-                lr_f1_c1 = metrics_df.loc['Class 1 (Top 10)', 'f1-score']
-                rf_f1_c0 = rf_metrics_df.loc['Class 0 (Not Top 10)', 'f1-score']
-                rf_f1_c1 = rf_metrics_df.loc['Class 1 (Top 10)', 'f1-score']
-            
-                # Data for plotting
-                f1_scores_3d = [
-                    [lr_f1_c0, rf_f1_c0], # F1-scores for Class 0 for LR and RF
-                    [lr_f1_c1, rf_f1_c1]  # F1-scores for Class 1 for LR and RF
-                ]
-            
-                models_3d = ['Logistic Regression', 'Random Forest']
-                classes_3d = ['Class 0 (Not Top 10)', 'Class 1 (Top 10)']
-            
-                fig_3d_f1 = plt.figure(figsize=(16, 12))
-                ax_3d_f1 = fig_3d_f1.add_subplot(111, projection='3d')
-            
-                xpos_3d = np.arange(len(models_3d))
-                ypos_3d = np.arange(len(classes_3d))
-                xpos_3d, ypos_3d = np.meshgrid(xpos_3d, ypos_3d)
-                xpos_3d = xpos_3d.flatten()
-                ypos_3d = ypos_3d.flatten()
-                zpos_3d = np.zeros_like(xpos_3d)
-            
-                dx_3d = dy_3d = 0.4
-                dz_3d = np.array(f1_scores_3d).flatten()
-            
-                colors_3d_plot = ['skyblue', 'lightcoral'] * len(models_3d) # Assign colors per class
-            
-                ax_3d_f1.bar3d(xpos_3d, ypos_3d, zpos_3d, dx_3d, dy_3d, dz_3d, color=colors_3d_plot, alpha=0.8)
-            
-                # Add labels and title
-                ax_3d_f1.set_xlabel('Model')
-                ax_3d_f1.set_ylabel('Class')
-                ax_3d_f1.set_zlabel('F1-score')
-                ax_3d_f1.set_title('3D Comparison of F1-scores by Model and Class')
-            
-                # Set ticks for models and classes
-                ax_3d_f1.set_xticks(np.arange(len(models_3d)) + dx_3d/2)
-                ax_3d_f1.set_xticklabels(models_3d)
-                ax_3d_f1.set_yticks(np.arange(len(classes_3d)) + dy_3d/2)
-                ax_3d_f1.set_yticklabels(classes_3d)
-            
-                st.pyplot(fig_3d_f1)
-            else:
-                st.warning("`metrics_df` or `rf_metrics_df` not found. Please ensure the model comparison sections were run.)")
-            
-            with st.expander("ℹ️ More Information"):
-                st.info("- Random Forest with engineered features outperforms Logistic Regression in predicting Top 10 success, emphasizing the value of feature interactions in UK chart modeling.")
-                st.info("- Model enhancements like duration-artist interactions capture nuanced factors driving UK music market dynamics.")
+        # Map models and classes to numeric indices for plotting
+        model_names_unique = all_models_comparison_df['Model'].unique()
+        class_labels = all_models_comparison_df['Class'].unique()
         
+        model_map = {m: i for i, m in enumerate(model_names_unique)}
+        class_map = {c: i for i, c in enumerate(class_labels)}
+        
+        # Add index columns
+        plot_df = all_models_comparison_df.copy()
+        plot_df['Model_Idx'] = plot_df['Model'].map(model_map)
+        plot_df['Class_Idx'] = plot_df['Class'].map(class_map)
+        plot_df['Metric Type'] = plot_df['Metric']  # rename for clarity
+    
+        fig = go.Figure()
+        surface_traces_list = []
+        metric_matrices = []
+    
+        for i, metric_type_to_plot in enumerate(metric_types_to_plot):
+            metric_plot_df = plot_df[plot_df['Metric Type'] == metric_type_to_plot].copy()
+            metric_matrix = metric_plot_df.pivot_table(index='Model_Idx', columns='Class_Idx', values='Score')
+            metric_matrix = metric_matrix.reindex(index=np.arange(len(model_names_unique)), columns=np.arange(len(class_labels)))
+            metric_matrices.append(metric_matrix)
+    
+            X_model_indices = metric_matrix.index.values
+            Y_class_indices = metric_matrix.columns.values
+            Z_scores = metric_matrix.values.T
+            X, Y = np.meshgrid(X_model_indices, Y_class_indices)
+    
+            current_color = metric_color_map[metric_type_to_plot]
+            surface_trace = go.Surface(
+                x=X, y=Y, z=Z_scores,
+                colorscale=[[0, current_color], [1, current_color]],
+                showscale=False, opacity=0.8, name=metric_type_to_plot,
+                hovertemplate='<b>Model:</b> %{x}<br><b>Class:</b> %{y}<br><b>' + metric_type_to_plot + ':</b> %{z:.2f}<extra></extra>'
+            )
+            surface_traces_list.append(surface_trace)
+    
+        # Wall trace
+        wall_x = np.array([X_model_indices.min(), X_model_indices.max()])
+        wall_z = np.array([0, 1])
+        wall_X_grid, wall_Z_grid = np.meshgrid(wall_x, wall_z)
+        wall_Y_grid = np.full_like(wall_X_grid, 0.5, dtype=float)
+        wall_trace = go.Surface(
+            x=wall_X_grid, y=wall_Y_grid, z=wall_Z_grid,
+            colorscale=[[0, 'grey'], [1, 'white']], opacity=0.3,
+            showscale=False, name='Class Separator Wall'
+        )
+    
+        # Intersection lines
+        intersection_line_traces_list = []
+        for i, metric_type_to_plot in enumerate(metric_types_to_plot):
+            metric_matrix = metric_matrices[i]
+            line_X_coords = X_model_indices
+            line_Y_coords = np.full_like(line_X_coords, 0.5, dtype=float)
+            line_Z_intersection_for_metric = (metric_matrix.iloc[:, 0] + metric_matrix.iloc[:, 1]) / 2
+    
+            intersection_line_trace = go.Scatter3d(
+                x=line_X_coords, y=line_Y_coords, z=line_Z_intersection_for_metric,
+                mode='lines', line=dict(color='black', width=3, dash='dot'),
+                name=f"{metric_type_to_plot} Intersection Line",
+                hovertemplate='<b>Model:</b> %{x}<br><b>Class Separator Y:</b> 0.5<br><b>' + metric_type_to_plot + ' Intersection:</b> %{z:.2f}<extra></extra>'
+            )
+            intersection_line_traces_list.append(intersection_line_trace)
+    
+        # Add traces
+        for trace in surface_traces_list:
+            fig.add_trace(trace)
+        fig.add_trace(wall_trace)
+        for trace in intersection_line_traces_list:
+            fig.add_trace(trace)
+    
+        # Dropdown buttons
+        total_traces = len(list(fig.data))
+        buttons = []
+        visible_all = [True] * total_traces
+        buttons.append(dict(label="All Metrics", method="update",
+                            args=[{"visible": visible_all}, {"scene.zaxis.title.text": "Score", "title.text": "Interactive Combined 3D Surface Plot (All Metrics)"}]))
+        for i, metric_name in enumerate(metric_types_to_plot):
+            visible_args = [False] * total_traces
+            visible_args[i] = True
+            visible_args[3] = True
+            visible_args[4+i] = True
+            buttons.append(dict(label=metric_name, method="update",
+                                args=[{"visible": visible_args}, {"scene.zaxis.title.text": metric_name, "title.text": f"Interactive Combined 3D Surface Plot ({metric_name})"}]))
+    
+        # Layout
+        fig.update_layout(
+            title={'text': 'Interactive Combined 3D Surface Plot of Model Performance', 'y':0.95, 'x':0.5, 'xanchor': 'center', 'yanchor': 'top'},
+            scene=dict(
+                xaxis_title='Model',
+                yaxis_title='Class',
+                zaxis_title='Score',
+                xaxis=dict(tickvals=X_model_indices, ticktext=[model_names_unique[i] for i in X_model_indices]),
+                yaxis=dict(tickvals=Y_class_indices, ticktext=class_labels[Y_class_indices]),
+                zaxis=dict(range=[0, 1])
+            ),
+            autosize=False, width=1200, height=800,
+            margin=dict(l=65, r=50, b=65, t=90),
+            updatemenus=[dict(type="dropdown", direction="down", x=0.0, y=1.15, showactive=True, buttons=buttons)]
+        )
+    
+        # --- Streamlit rendering ---
+        st.plotly_chart(fig, width='stretch')
+    
         st.markdown('---')
     with tabs[1]:
         # --- Section 2: Feature Engineering Visualizations (Relevant to Chart Success) ---
@@ -1991,7 +2148,7 @@ with tab2:
         
                     # Predictive modeling
                     if 'rf_accuracy_eng' in locals() and 'rf_accuracy' in locals():
-                        better_model = 'with engineered features' if rf_accuracy_eng >= rf_accuracy else 'without engineered features'
+                        better_model = 'with engineered features' if rf_accuracy_eng >= rf_accuracy_no_eng else 'without engineered features'
                         with st.expander("📊 Predictive Modeling"):
                             st.write(f"- Random Forest model **{better_model}** performs stronger for the current UK market slice.")
                             st.markdown("- Reinforces the value of feature engineering in chart success forecasting.")
