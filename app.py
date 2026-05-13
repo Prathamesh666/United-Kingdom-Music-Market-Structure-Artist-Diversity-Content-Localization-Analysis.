@@ -1001,13 +1001,14 @@ with tab1:
             div[data-testid="stMetricDelta"] {
                 font-size: 0.9rem;
                 font-weight: 600;
-                animation: bounceXY 6s ease-in-out infinite alternate;
+                animation: bounceXY 9s ease-in-out infinite alternate;
             }
         
             /* Bouncing animation across both axes */
             @keyframes bounceXY {
                 0%   { transform: translate(0%, 0%); }
-                50%  { transform: translate(-120%, 0%); }
+                33%  { transform: translate(-120%, 0%); }
+                67%  { transform: translate(0%, 120%); }
                 100% { transform: translate(0%, 0%); }
             }
             </style>
