@@ -1008,7 +1008,7 @@ with tab1:
             @keyframes bounceXY {
                 0%   { transform: translate(0%, 0%); }
                 33%  { transform: translate(-120%, 0%); }
-                67%  { transform: translate(0%, 120%); }
+                67%  { transform: translate(120%, 0%); }
                 100% { transform: translate(0%, 0%); }
             }
             </style>
