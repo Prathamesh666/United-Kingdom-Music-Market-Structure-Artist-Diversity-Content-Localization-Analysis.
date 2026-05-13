@@ -6,6 +6,7 @@ import seaborn as sns
 import networkx as nx
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from matplotlib.lines import Line2D
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LogisticRegression
@@ -297,76 +298,154 @@ with tab1:
             st.warning('No data available for the selected filters to display top artists.')
         
         st.markdown('---')
+    
     with tabs[2]:
         st.subheader('Artist Collaboration Network')
-        
+    
         if collaboration_choice == 'Solo Tracks':
             st.warning("The artist collaboration network is displayed only when 'All Tracks' or 'Collaborative Tracks' are selected. Please adjust the 'Track Type' filter to view the network.")
         elif filtered_df[filtered_df['is_collaboration'] == True].empty:
             st.error("No collaborative tracks found for the selected filters to build a network.")
         else:
-            # Filter for collaborative tracks from the already filtered_df
             collaborative_tracks_filtered = filtered_df[filtered_df['is_collaboration'] == True].copy()
-        
+    
             if not collaborative_tracks_filtered.empty:
-                collaboration_pairs_filtered = []
-        
-                # Group by unique collaboration identifier (date, song, position) and generate pairs
+                # Deduplicate by unique artist sets
+                unique_collaborations = {}
                 for _, group in collaborative_tracks_filtered.groupby(['date', 'song', 'position']):
-                    artists_in_collaboration = group['artist'].tolist()
-                    # Generate all unique pairs of artists within this collaboration
-                    for artist1, artist2 in itertools.combinations(sorted(artists_in_collaboration), 2):
-                        collaboration_pairs_filtered.append(tuple(sorted((artist1, artist2))))
-        
-                # Count the occurrences of each unique collaboration pair
-                collaboration_counts_filtered = collections.Counter(collaboration_pairs_filtered)
-        
-                # Create a graph
+                    artists_in_collaboration = tuple(sorted(group['artist'].unique()))
+                    if artists_in_collaboration not in unique_collaborations:
+                        unique_collaborations[artists_in_collaboration] = set()
+                    unique_collaborations[artists_in_collaboration].add(group['song'].iloc[0])
+    
+                # Build graph from unique collaborations
                 G = nx.Graph()
-        
-                # Add nodes (artists)
-                all_collaborating_artists_filtered = set()
-                for pair, _ in collaboration_counts_filtered.items():
-                    all_collaborating_artists_filtered.add(pair[0])
-                    all_collaborating_artists_filtered.add(pair[1])
-                G.add_nodes_from(all_collaborating_artists_filtered)
-        
-                # Add edges with weights based on collaboration frequency
-                for pair, count in collaboration_counts_filtered.items():
-                    G.add_edge(pair[0], pair[1], weight=count)
-        
-                # Prepare for visualization
-                fig, ax = plt.subplots(figsize=(15, 10)) # Use fig, ax for st.pyplot
-        
-                # Use a spring layout for better visualization of clusters
+                for artist_group, songs in unique_collaborations.items():
+                    # Add nodes
+                    G.add_nodes_from(artist_group)
+                    # Add edges between all pairs in this group
+                    for artist1, artist2 in itertools.combinations(artist_group, 2):
+                        if G.has_edge(artist1, artist2):
+                            G[artist1][artist2]['weight'] += 1
+                        else:
+                            G.add_edge(artist1, artist2, weight=1)
+    
+                # Visualization
+                fig, ax = plt.subplots(figsize=(15, 10))
                 pos = nx.spring_layout(G, k=0.15, iterations=50)
-        
-                # Draw nodes
+    
                 nx.draw_networkx_nodes(G, pos, node_size=1000, node_color='skyblue', alpha=0.9, ax=ax)
-        
-                # Draw edges with varying thickness based on weight, only if there are edges
+    
                 if G.number_of_edges() > 0:
-                    # construct an edge list (pairs of nodes) and a parallel list of weights
                     edge_list = list(G.edges())
-                    weights = [d['weight'] for u, v, d in G.edges(data=True)]
-                    max_weight = max(weights) if weights else 1 # Avoid division by zero if no weights
+                    weights = [d['weight'] for _, _, d in G.edges(data=True)]
+                    max_weight = max(weights) if weights else 1
                     nx.draw_networkx_edges(G, pos, edgelist=edge_list, width=[w / max_weight * 5 for w in weights], alpha=0.7, edge_color='gray', ax=ax)
                 else:
                     st.warning("No collaboration edges to display for the current filter.")
-        
-                # Draw labels
+    
                 nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold', ax=ax)
-        
-                ax.set_title('Artist Collaboration Network (Filtered)', size=20)
-                ax.axis('off') # Hide axes
-                st.pyplot(fig) # Display the plot in Streamlit
-                
+    
+                ax.set_title('Artist Collaboration Network (Unique Collaborations)', size=20)
+                ax.axis('off')
+                st.pyplot(fig)
+    
                 with st.expander("ℹ️ More Information"):
-                    st.info('This network graph visualizes artist collaborations. Nodes represent artists, and edges represent collaborations. The thickness of an edge indicates the frequency of collaboration between the connected artists.')
-        
+                    for artist_group, songs in unique_collaborations.items():
+                        st.write(f"**{' , '.join(artist_group)}** collaborated on: {', '.join(sorted(songs))}")
+                    st.info('This network graph visualizes unique artist collaborations. Nodes represent artists, edges represent collaborations, and edge thickness indicates frequency across unique collaborations.')
+    
+                # --- 3D Interactive Visualization ---
+                st.markdown('---')
+                st.subheader("Interactive 3D Collaboration Network")
+                
+                # Use the same collaboration_counts_filtered for 3D
+                pos_3d = nx.spring_layout(G, dim=3, k=0.15, iterations=50, seed=42)
+                
+                node_x, node_y, node_z, node_text, node_size = [], [], [], [], []
+                for node in G.nodes():
+                    x, y, z = pos_3d[node]
+                    node_x.append(x); node_y.append(y); node_z.append(z)
+                    
+                    degree_for_sizing_color = G.degree[node]
+                    collaborator_details = []
+                    for neighbor in G.neighbors(node):
+                        weight = G.get_edge_data(node, neighbor)['weight']
+                        collaborator_details.append(f" - {neighbor.title()}: {weight} times")
+                    
+                    hover_info = f"Artist: {node.title()}<br>Total Collaborations: {len(collaborator_details)}"
+                    if collaborator_details:
+                        hover_info += "<br>Collaborated with:<br>" + "<br>".join(collaborator_details)
+                    
+                    node_text.append(hover_info)
+                    node_size.append(degree_for_sizing_color * 2 + 5)
+                
+                node_degrees = [G.degree[node] for node in G.nodes()]
+                node_trace = go.Scatter3d(
+                    x=node_x, y=node_y, z=node_z, mode='markers', hoverinfo='text', text=node_text,
+                    marker=dict(
+                        showscale=True, colorscale='Viridis', reversescale=True, color=node_degrees, size=node_size,
+                        colorbar=dict(
+                            thickness=15,
+                            title=dict(
+                                text='Number of Collaborations (Degree)',
+                                side='right'
+                            ),
+                            xanchor='left',
+                            tickmode='linear',   # ✅ force linear ticks
+                            dtick=1              # ✅ step size of 1 → integers only
+                        ),
+                        line_width=2
+                    )
+                )
+                
+                edg_traces = []
+                edge_weights = [d['weight'] for _, _, d in G.edges(data=True)]
+                max_weight = max(edge_weights) if edge_weights else 1
+                scaled_edge_widths = [(w / max_weight) * 5 + 1 for w in edge_weights]
+                
+                for idx, edge in enumerate(G.edges(data=True)):
+                    x0, y0, z0 = pos_3d[edge[0]]
+                    x1, y1, z1 = pos_3d[edge[1]]
+                    edg_traces.append(go.Scatter3d(
+                        x=[x0, x1, None],
+                        y=[y0, y1, None],
+                        z=[z0, z1, None],
+                        mode='lines',
+                        line=dict(width=scaled_edge_widths[idx], color='rgba(128,128,128,0.7)'),
+                        hoverinfo='none'
+                    ))
+                
+                fig3d = go.Figure(
+                    data=edg_traces + [node_trace],
+                    layout=go.Layout(
+                        title=dict(
+                            text='Interactive 3D Artist Collaboration Network',
+                            font=dict(size=20)
+                        ),
+                        showlegend=False,
+                        hovermode='closest',
+                        margin=dict(b=20, l=5, r=5, t=40),
+                        annotations=[dict(
+                            text="Collaborations weighted by frequency",
+                            showarrow=False,
+                            xref="paper", yref="paper",
+                            x=0.005, y=-0.002
+                        )],
+                        scene=dict(
+                            xaxis=dict(showbackground=False, showticklabels=False, zeroline=False, title=''),
+                            yaxis=dict(showbackground=False, showticklabels=False, zeroline=False, title=''),
+                            zaxis=dict(showbackground=False, showticklabels=False, zeroline=False, title=''),
+                            camera=dict( up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=1.25, y=1.25, z=1.25) )
+                        )
+                    )
+                )
+                
+                st.plotly_chart(fig3d, width='stretch')
+            
             else:
                 st.warning("No collaborative tracks found for the selected filters to build a network.")
-        
+                
         st.markdown('---')
         
     with tabs[3]: 
@@ -1736,8 +1815,6 @@ with tab2:
             plt.close(fig_accuracy_comp)
         else:
             st.warning("`accuracy_summary_df` not found. Please ensure the model accuracy summary section was run.")
-            
-        import plotly.graph_objects as go
     
         # --- Your Plotly figure construction code ---
         metric_types_to_plot = ['F1-score', 'Precision', 'Recall']
