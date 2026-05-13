@@ -421,7 +421,8 @@ with tab1:
                     layout=go.Layout(
                         title=dict(
                             text='Interactive 3D Artist Collaboration Network',
-                            font=dict(size=20)
+                            font=dict(size=20), y=0.95, x=0.5,
+                            xanchor='center', yanchor='top'
                         ),
                         showlegend=False,
                         hovermode='closest',
