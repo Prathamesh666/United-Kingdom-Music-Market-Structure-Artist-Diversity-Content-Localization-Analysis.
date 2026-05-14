@@ -1108,7 +1108,7 @@ with tab1:
     with tabs[7]:
         st.subheader("📊 Key Insights and Findings")
         
-        with st.expander("#### Comprehensive UK Music Market Analysis"):
+        with st.expander("Comprehensive UK Music Market Analysis"):
             st.info("This dashboard analyzes the UK music market by comparing the current filter view against the full dataset baseline to show how the selected subset differs from the overall market.")
         
         # 1. Artist Dominance and Diversity
@@ -1374,6 +1374,8 @@ print("Dashboard created successfully with basic Streamlit structure. Please wai
 print("--- Starting Data Preparation and Model Training For Recommendational Analysis ---")
 
 # Re-initialize df from the original CSV and perform initial preprocessing
+# Save the full dataset first
+df_merged_original = df_merged.copy()
 df = filtered_df.copy() # Use the already filtered data for consistency with the dashboard filters
 df['artist'] = df['artist'].str.lower().str.strip()
 df['artist'] = df['artist'].astype(str).apply(lambda x: [a.strip() for a in x.split('&')])
@@ -2355,10 +2357,10 @@ with tab2:
                 )
                 
                 st.info("Overall Correlation Matrix (Top 3 strongest relationships):")
-                st.dataframe(overall_corr_df)
+                st.dataframe(overall_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
                 
                 st.info("Filtered Correlation Matrix (Top 3 strongest relationships):")
-                st.dataframe(filtered_corr_df)
+                st.dataframe(filtered_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
         
                 st.success("Filtered vs baseline correlations highlight how collaboration and duration interact differently under subset conditions.")
             else:
