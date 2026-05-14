@@ -7,12 +7,18 @@ import networkx as nx
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import plotly.express as px
 from matplotlib.lines import Line2D
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
+from sklearn.cluster import KMeans
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.svm import SVC
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.mixture import GaussianMixture
 import seaborn as sns
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
@@ -536,17 +542,17 @@ with tab1:
         
                 # Expanders for deeper insights
                 with st.expander("📊 Broader Cultural Context"):
-                    st.markdown("- Insights are based on the current filters and may shift as the dataset changes.")
-                    st.markdown("- Genre, artist profile, and release strategy all affect how explicit content performs in the UK market.")
+                    st.info("- Insights are based on the current filters and may shift as the dataset changes.")
+                    st.info("- Genre, artist profile, and release strategy all affect how explicit content performs in the UK market.")
         
                 with st.expander("🎶 Granular Analysis Suggestions"):
-                    st.markdown("- Examine explicitness by genre or artist cohort.")
-                    st.markdown("- Some musical styles and fanbases are more accepting of explicit material than others.")
+                    st.info("- Examine explicitness by genre or artist cohort.")
+                    st.info("- Some musical styles and fanbases are more accepting of explicit material than others.")
         
                 if explicit_other is not None:
                     with st.expander("🌍 Beyond the Top 50"):
                         st.metric("Outside Top 50 Explicit %", f"{explicit_other:.2f}%")
-                        st.markdown("- Higher explicitness in lower ranks may signal niche markets or emerging trends in UK listener demographics.")
+                        st.info("- Higher explicitness in lower ranks may signal niche markets or emerging trends in UK listener demographics.")
         
         st.markdown("---")
     with tabs[4]:
@@ -614,7 +620,7 @@ with tab1:
             st.warning("No album type data available for the selected filters to display the chart.")
         
         with st.expander("ℹ️ More Information"):
-            st.info('This bar chart displays the distribution of different album types (single, album, compilation) within the filtered dataset in numerical and percentage(%) format, indicating the prevalence of each release format.')
+            st.info('These charts displays the distribution of different album types (single, album, compilation) within the filtered dataset in numerical and percentage(%) format, indicating the prevalence of each release format.')
         
         st.markdown('---')
     with tabs[5]:
@@ -821,8 +827,8 @@ with tab1:
                         st.markdown("➡️ Indicates stable duration preferences across UK listeners.")
         
                     with st.expander("📊 Contextual Notes"):
-                        st.markdown("- These comparisons make insights dynamic, showing whether the current filter view leans more short-form or long-form than the UK baseline.")
-                        st.markdown("- Genre, release strategy, and artist profile all influence duration trends.")
+                        st.info("- These comparisons make insights dynamic, showing whether the current filter view leans more short-form or long-form than the UK baseline.")
+                        st.info("- Genre, release strategy, and artist profile all influence duration trends.")
         
                 else:
                     # Baseline case
@@ -1333,7 +1339,7 @@ with tab1:
                 else:
                     st.warning("Stable duration → Preferences unchanged.")
         
-            st.markdown("*This filtered view highlights shifts in artist dominance, collaboration strength, and format preferences compared to the full dataset.*")
+            st.success("*This filtered view highlights shifts in artist dominance, collaboration strength, and format preferences compared to the full dataset.*")
         
         else:
             st.markdown("**Full Market Dynamics (Complete Dataset):**")
@@ -1359,7 +1365,7 @@ with tab1:
                 st.markdown("⏱️ **Duration**")
                 st.success("Stable track lengths → Consistent listener preferences shaped by streaming algorithms.")
         
-            st.markdown("*Together, these dynamics suggest a mature, stable UK market where innovation happens within predictable frameworks — ideal for benchmarking and long-term planning.*")
+            st.success("*Together, these dynamics suggest a mature, stable UK market where innovation happens within predictable frameworks — ideal for benchmarking and long-term planning.*")
         
         st.markdown("---")
 
@@ -1427,14 +1433,18 @@ y_lr = df_merged['chart_success']
 
 X_train_no_eng, X_test_no_eng, y_train_no_eng, y_test_no_eng = train_test_split(X_lr, y_lr, test_size=0.2, random_state=42, stratify=y_lr)
 
+# Helper function for metrics
+def get_metrics(y_true, y_pred, model_name):
+    acc = accuracy_score(y_true, y_pred)
+    metrics_df = pd.DataFrame(classification_report(y_true, y_pred, output_dict=True)).transpose()
+    metrics_df = metrics_df.drop(labels=['accuracy','macro avg','weighted avg'])
+    metrics_df.rename(index={'0':'Class 0 (Not Top 10)','1':'Class 1 (Top 10)'}, inplace=True)
+    return acc, metrics_df
+
 model_lr = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
 model_lr.fit(X_train_no_eng, y_train_no_eng)
 y_pred_lr = model_lr.predict(X_test_no_eng)
-lr_accuracy_no_eng = accuracy_score(y_test_no_eng, y_pred_lr)
-metrics_df = pd.DataFrame(classification_report(y_test_no_eng, y_pred_lr, output_dict=True)).transpose()
-metrics_df = metrics_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-metrics_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-print("Logistic Regression (Without Engineering Features) model trained and metrics calculated.")
+lr_accuracy_no_eng, metrics_df = get_metrics(y_test_no_eng, y_pred_lr, "Logistic Regression (No Features)")
 
 # --- Module 2: Linear Regression ---
 linear_model_no_eng = LinearRegression()
@@ -1450,21 +1460,38 @@ Lr_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (T
 rf_model_no_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
 rf_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
 rf_y_pred_no_eng = rf_model_no_eng.predict(X_test_no_eng)
-rf_accuracy_no_eng = accuracy_score(y_test_no_eng, rf_y_pred_no_eng)
-rf_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, rf_y_pred_no_eng, output_dict=True)).transpose()
-rf_metrics_df_no_eng = rf_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-rf_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-print("Random Forest model (no engineered features) trained and metrics calculated.")
+rf_accuracy_no_eng, rf_metrics_df_no_eng = get_metrics(y_test_no_eng, rf_y_pred_no_eng, "Random Forest (No Features)")
 
 # --- Model 4: XGBoost (No Engineered Features) ---
 xgb_model_no_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
     scale_pos_weight=(len(y_train_no_eng) - y_train_no_eng.sum()) / y_train_no_eng.sum()) # Handle class imbalance
 xgb_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
 xgb_y_pred_no_eng = xgb_model_no_eng.predict(X_test_no_eng)
-xgb_accuracy_no_eng = accuracy_score(y_test_no_eng, xgb_y_pred_no_eng)
-xgb_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, xgb_y_pred_no_eng, output_dict=True)).transpose()
-xgb_metrics_df_no_eng = xgb_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-xgb_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+xgb_accuracy_no_eng, xgb_metrics_df_no_eng = get_metrics(y_test_no_eng, xgb_y_pred_no_eng, "XGBoost (No Features)")
+
+# --- Model 5: K-Means Clustering ---
+kmeans_no_eng = KMeans(n_clusters=2, random_state=42)
+kmeans_no_eng.fit(X_train_no_eng)
+kmeans_labels_no_eng = kmeans_no_eng.predict(X_test_no_eng)
+kmeans_accuracy_no_eng, kmeans_metrics_df_no_eng = get_metrics(y_test_no_eng, kmeans_labels_no_eng, "KMeans (No Features)")
+
+# --- Model 6: SVM ---
+svm_no_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
+svm_no_eng.fit(X_train_no_eng, y_train_no_eng)
+svm_y_pred_no_eng = svm_no_eng.predict(X_test_no_eng)
+svm_accuracy_no_eng, svm_metrics_df_no_eng = get_metrics(y_test_no_eng, svm_y_pred_no_eng, "SVM (No Features)")
+
+# --- Model 7: Gradient Boosting ---
+gb_no_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
+gb_no_eng.fit(X_train_no_eng, y_train_no_eng)
+gb_y_pred_no_eng = gb_no_eng.predict(X_test_no_eng)
+gb_accuracy_no_eng, gb_metrics_df_no_eng = get_metrics(y_test_no_eng, gb_y_pred_no_eng, "Gradient Boosting (No Features)")
+
+# --- Model 8: Gaussian Mixture ---
+gmm_no_eng = GaussianMixture(n_components=2, random_state=42)
+gmm_no_eng.fit(X_train_no_eng)
+gmm_labels_no_eng = gmm_no_eng.predict(X_test_no_eng)
+gmm_accuracy_no_eng, gmm_metrics_df_no_eng = get_metrics(y_test_no_eng, gmm_labels_no_eng, "Gaussian Mixture (No Features)")
 
 # --- 3.1 Predictive Modeling For Chart Success (With Engineered Features) ---
 features_engineered_rf = [
@@ -1483,11 +1510,7 @@ X_train_eng, X_test_eng, y_train_eng, y_test_eng = train_test_split(X_engineered
 lr_model_eng = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
 lr_model_eng.fit(X_train_eng, y_train_eng)
 lr_y_pred_eng = lr_model_eng.predict(X_test_eng)
-# Calculate accuracy
-lr_accuracy_eng = accuracy_score(y_test_eng, lr_y_pred_eng)
-lr_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, lr_y_pred_eng, output_dict=True)).transpose()
-lr_metrics_eng_df = lr_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+lr_accuracy_eng, lr_metrics_eng_df = get_metrics(y_test_eng, lr_y_pred_eng, "Logistic Regression (Engineered Features)")
 
 # --- Model 2: Linear Regression ---
 Lr_model_eng = LinearRegression()
@@ -1502,21 +1525,38 @@ Lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 
 rf_model_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
 rf_model_eng.fit(X_train_eng, y_train_eng)
 rf_y_pred_eng = rf_model_eng.predict(X_test_eng)
-rf_accuracy_eng = accuracy_score(y_test_eng, rf_y_pred_eng)
-rf_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, rf_y_pred_eng, output_dict=True)).transpose()
-rf_metrics_eng_df = rf_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-rf_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-print("Random Forest model (with engineered features) trained and metrics calculated.")
+rf_accuracy_eng, rf_metrics_eng_df = get_metrics(y_test_eng, rf_y_pred_eng, "Random Forest (Engineered Features)")
 
 # --- Model 4: XGBoost ---
 xgb_model_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
     scale_pos_weight=(len(y_train_eng) - y_train_eng.sum()) / y_train_eng.sum()) # Handle class imbalance
 xgb_model_eng.fit(X_train_eng, y_train_eng)
 xgb_y_pred_eng = xgb_model_eng.predict(X_test_eng)
-xgb_accuracy_eng = accuracy_score(y_test_eng, xgb_y_pred_eng)
-xgb_metrics_df_eng = pd.DataFrame(classification_report(y_test_eng, xgb_y_pred_eng, output_dict=True)).transpose()
-xgb_metrics_df_eng = xgb_metrics_df_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-xgb_metrics_df_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+xgb_accuracy_eng, xgb_metrics_eng_df = get_metrics(y_test_eng, xgb_y_pred_eng, "XGBoost (Engineered Features)")
+
+# --- Model 5: KMeans --- 
+kmeans_eng = KMeans(n_clusters=2, random_state=42)
+kmeans_eng.fit(X_train_eng)
+kmeans_labels_eng = kmeans_eng.predict(X_test_eng)
+kmeans_accuracy_eng, kmeans_metrics_df_eng = get_metrics(y_test_eng, kmeans_labels_eng, "KMeans (Engineered Features)")
+
+# --- Model 6: SVM --- 
+svm_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
+svm_eng.fit(X_train_eng, y_train_eng)
+svm_y_pred_eng = svm_eng.predict(X_test_eng)
+svm_accuracy_eng, svm_metrics_df_eng = get_metrics(y_test_eng, svm_y_pred_eng, "SVM (Engineered Features)")
+
+# --- Model 7: Gradient Boosting --- 
+gb_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
+gb_eng.fit(X_train_eng, y_train_eng)
+gb_y_pred_eng = gb_eng.predict(X_test_eng)
+gb_accuracy_eng, gb_metrics_df_eng = get_metrics(y_test_eng, gb_y_pred_eng, "Gradient Boosting (Engineered Features)")
+
+# --- Model 8: Gaussian Mixture --- 
+gmm_eng = GaussianMixture(n_components=2, random_state=42)
+gmm_eng.fit(X_train_eng)
+gmm_labels_eng = gmm_eng.predict(X_test_eng)
+gmm_accuracy_eng, gmm_metrics_df_eng = get_metrics(y_test_eng, gmm_labels_eng, "Gaussian Mixture (Engineered Features)")
 
 # --- 3.3 Model Comparison DataFrames for All Models ---
 
@@ -1543,10 +1583,15 @@ def build_comparison_df(metrics_no_eng_df, metrics_eng_df, model_name):
 lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
 linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
 rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
-xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_df_eng, "XGBoost")
+xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_eng_df, "XGBoost")
+kmeans_comparison_df = build_comparison_df(kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, "KMeans")
+svm_comparison_df = build_comparison_df(svm_metrics_df_no_eng, svm_metrics_df_eng, "SVM")
+gb_comparison_df = build_comparison_df(gb_metrics_df_no_eng, gb_metrics_df_eng, "Gradient Boosting")
+gmm_comparison_df = build_comparison_df(gmm_metrics_df_no_eng, gmm_metrics_df_eng, "Gaussian Mixture")
 
 # Combine all into one master comparison DataFrame
-all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df], ignore_index=True)
+all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
+                                    kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
 
 print("All model comparison dataframe created.")
 
@@ -1576,10 +1621,13 @@ accuracy_summary_df = pd.DataFrame({
     'Model': [
         'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
         'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
-        'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)'
+        'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)', 'KMeans (No Features)', 'KMeans (Engineered Features)',
+        'SVM (No Features)', 'SVM (Engineered Features)', 'Gradient Boosting (No Features)', 'Gradient Boosting (Engineered Features)',
+        'Gaussian Mixture (No Features)', 'Gaussian Mixture (Engineered Features)'
     ],
     'Accuracy': [
-        lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng
+        lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng,
+        kmeans_accuracy_no_eng, kmeans_accuracy_eng, svm_accuracy_no_eng, svm_accuracy_eng, gb_accuracy_no_eng, gb_accuracy_eng, gmm_accuracy_no_eng, gmm_accuracy_eng
     ]
 })
 print("Model comparison dataframes created.")
@@ -1741,7 +1789,7 @@ with tab2:
         # --- Model Selection Filter ---
         model_choice = st.selectbox(
             "Select a Model to View Metrics",
-            ["Logistic Regression", "Linear Regression", "Random Forest", "XGBoost"]
+            ["🧩 Logistic Regression", "📈 Linear Regression", "🌳 Random Forest 🌲", "🚀 XGBoost"]
         )
     
         # --- Helper function to plot heatmap ---
@@ -1758,7 +1806,7 @@ with tab2:
             "Logistic Regression": (metrics_df, lr_metrics_eng_df, lr_comparison_df),
             "Linear Regression": (Lr_metrics_df_no_eng, Lr_metrics_eng_df, linear_comparison_df),
             "Random Forest": (rf_metrics_df_no_eng, rf_metrics_eng_df, rf_comparison_df),
-            "XGBoost": (xgb_metrics_df_no_eng, xgb_metrics_df_eng, xgb_comparison_df)
+            "XGBoost": (xgb_metrics_df_no_eng, xgb_metrics_eng_df, xgb_comparison_df)
         }
     
         # Get the correct DataFrames
@@ -2102,6 +2150,45 @@ with tab2:
                     st.info("- Duration preferences by genre may reflect traditional formats, audience attention spans, or production styles in UK music culture.")
         else:
             st.warning("`genre_duration_stats` or `df_merged` not found. Please ensure the genre analysis section was run.")
+        
+        def genre_3d_analysis_tab(df_merged: pd.DataFrame):
+            st.subheader("🎶 Genre Multivariate Analysis (3D)")
+        
+            # Aggregation
+            genre_popularity_mean = df_merged.groupby('genre')['popularity'].mean()
+            genre_duration_mean = df_merged.groupby('genre')['duration_min'].mean()
+            genre_explicitness_percentage = df_merged.groupby('genre')['is_explicit'].mean() * 100
+        
+            genre_3d_df = pd.DataFrame({ 'Mean Popularity': genre_popularity_mean, 'Mean Duration (min)': genre_duration_mean, 'Explicit Content (%)': genre_explicitness_percentage
+            }).reset_index()
+        
+            genre_3d_df = genre_3d_df.fillna(0)
+        
+            # Plotly 3D scatter
+            fig = px.scatter_3d( genre_3d_df, x='Mean Popularity', y='Mean Duration (min)', z='Explicit Content (%)', color='genre', hover_name='genre',
+                hover_data={ 'Mean Popularity': ':.2f', 'Mean Duration (min)': ':.2f', 'Explicit Content (%)': ':.2f' },
+                title='<b>3D Multivariate Analysis: Genre Characteristics</b>',
+                height=700,
+                labels={ 'Mean Popularity': 'Mean Popularity (0-100)', 'Mean Duration (min)': 'Mean Duration (minutes)', 'Explicit Content (%)': 'Explicit Content (%)' }
+            )
+        
+            fig.update_layout(
+                scene_camera=dict( up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=1.5, y=1.5, z=1.5) ),
+                margin=dict(l=0, r=0, b=0, t=50), title_x=0.5, title_y=0.95, legend_title_text='<b>Genres</b>'
+            )
+        
+            # Render in Streamlit
+            st.plotly_chart(fig, width='stretch')
+        
+            # Insights expander
+            with st.expander("📊 Insights from 3D Genre Analysis"):
+                st.info("- Genres with **higher popularity** tend to cluster with moderate durations.")
+                st.info("- **Explicit content percentage** varies widely across genres, showing cultural differences.")
+                st.info("- The 3D view helps identify optimal combinations of duration, popularity, and explicitness for UK market penetration.")
+        
+            # Show aggregated data table
+            with st.expander("📋 Aggregated Genre Metrics Table"):
+                st.dataframe(genre_3d_df.style.format({ 'Mean Popularity': "{:.2f}", 'Mean Duration (min)': "{:.2f}", 'Explicit Content (%)': "{:.2f}" }))
         
         # Define a list of major genres and their definitions
         genre_definitions = {
