@@ -1789,7 +1789,8 @@ with tab2:
         # --- Model Selection Filter ---
         model_choice = st.selectbox(
             "Select a Model to View Metrics",
-            ["🧩 Logistic Regression", "📈 Linear Regression", "🌳 Random Forest 🌲", "🚀 XGBoost"]
+            ["🧩 Logistic Regression", "📈 Linear Regression", "🌳 Random Forest 🌲", "🚀 XGBoost",
+            "🔄 KMeans Clustering", "⚔️ Support Vector Machine (SVM)", "🔥 Gradient Boosting", "🎭 Gaussian Mixture"]
         )
     
         # --- Helper function to plot heatmap ---
@@ -1803,10 +1804,14 @@ with tab2:
     
         # --- Dictionary mapping model names to their metric DataFrames ---
         model_metrics = {
-            "Logistic Regression": (metrics_df, lr_metrics_eng_df, lr_comparison_df),
-            "Linear Regression": (Lr_metrics_df_no_eng, Lr_metrics_eng_df, linear_comparison_df),
-            "Random Forest": (rf_metrics_df_no_eng, rf_metrics_eng_df, rf_comparison_df),
-            "XGBoost": (xgb_metrics_df_no_eng, xgb_metrics_eng_df, xgb_comparison_df)
+            "🧩 Logistic Regression": (metrics_df, lr_metrics_eng_df, lr_comparison_df),
+            "📈 Linear Regression": (Lr_metrics_df_no_eng, Lr_metrics_eng_df, linear_comparison_df),
+            "🌳 Random Forest 🌲": (rf_metrics_df_no_eng, rf_metrics_eng_df, rf_comparison_df),
+            "🚀 XGBoost": (xgb_metrics_df_no_eng, xgb_metrics_eng_df, xgb_comparison_df),
+            "🔄 KMeans Clustering": (kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, kmeans_comparison_df),
+            "⚔️ Support Vector Machine (SVM)": (svm_metrics_df_no_eng, svm_metrics_df_eng, svm_comparison_df),
+            "🔥 Gradient Boosting": (gb_metrics_df_no_eng, gb_metrics_df_eng, gb_comparison_df),
+            "🎭 Gaussian Mixture": (gmm_metrics_df_no_eng, gmm_metrics_df_eng, gmm_comparison_df)
         }
     
         # Get the correct DataFrames
@@ -1849,7 +1854,7 @@ with tab2:
         # --- Fixed Accuracy Comparison Table ---
         if 'accuracy_summary_df' in locals():
             # Summary table of model accuracies
-            with st.expander("📊 Model Accuracy Comparison (All Models)"):
+            with st.expander("📊 **Model Accuracy Comparison (All Models):**"):
                 st.dataframe(accuracy_summary_df)
         
             # Add the bar chart for model accuracies
@@ -1863,6 +1868,12 @@ with tab2:
         
             st.pyplot(fig_accuracy_comp)
             plt.close(fig_accuracy_comp)
+            # Get the row with the highest accuracy
+            best_model_row = accuracy_summary_df.loc[accuracy_summary_df['Accuracy'].idxmax()]
+            best_model_name = best_model_row['Model']
+            best_model_accuracy = best_model_row['Accuracy']
+        
+            st.success(f"🏆 Best Model: **{best_model_name}** with Accuracy = {best_model_accuracy:.4f}")
         else:
             st.warning("`accuracy_summary_df` not found. Please ensure the model accuracy summary section was run.")
     
@@ -2151,44 +2162,56 @@ with tab2:
         else:
             st.warning("`genre_duration_stats` or `df_merged` not found. Please ensure the genre analysis section was run.")
         
-        def genre_3d_analysis_tab(df_merged: pd.DataFrame):
-            st.subheader("🎶 Genre Multivariate Analysis (3D)")
+        st.subheader("🎶 Genre Multivariate Analysis (3D)")
+    
+        # Aggregation
+        genre_popularity_mean = df_merged.groupby('genre')['popularity'].mean()
+        genre_duration_mean = df_merged.groupby('genre')['duration_min'].mean()
+        genre_explicitness_percentage = df_merged.groupby('genre')['is_explicit'].mean() * 100
+    
+        genre_3d_df = pd.DataFrame({ 'Mean Popularity': genre_popularity_mean, 'Mean Duration (min)': genre_duration_mean, 'Explicit Content (%)': genre_explicitness_percentage
+        }).reset_index()
+    
+        genre_3d_df = genre_3d_df.fillna(0)
+    
+        # Plotly 3D scatter
+        fig = px.scatter_3d( genre_3d_df, x='Mean Popularity', y='Mean Duration (min)', z='Explicit Content (%)', color='genre', hover_name='genre',
+            hover_data={ 'Mean Popularity': ':.2f', 'Mean Duration (min)': ':.2f', 'Explicit Content (%)': ':.2f' },
+            title='<b>3D Multivariate Analysis: Genre Characteristics</b>',
+            height=700,
+            labels={ 'Mean Popularity': 'Mean Popularity (0-100)', 'Mean Duration (min)': 'Mean Duration (minutes)', 'Explicit Content (%)': 'Explicit Content (%)' }
+        )
         
-            # Aggregation
-            genre_popularity_mean = df_merged.groupby('genre')['popularity'].mean()
-            genre_duration_mean = df_merged.groupby('genre')['duration_min'].mean()
-            genre_explicitness_percentage = df_merged.groupby('genre')['is_explicit'].mean() * 100
+        fig.update_layout(
+            scene_camera=dict(
+                up=dict(x=0, y=0, z=1),
+                center=dict(x=0, y=0, z=0),
+                eye=dict(x=1.5, y=1.5, z=1.5)
+            ),
+            margin=dict(l=0, r=0, b=0, t=50),
+            title=dict(
+                text='<b>3D Multivariate Analysis: Genre Characteristics</b>',
+                x=0.5,  # Center horizontally
+                y=0.95, # Position near the top
+                xanchor='center',
+                yanchor='top',
+                font=dict(size=20)  # Optional: adjust font size
+            ),
+            legend_title_text='<b>Genres</b>'
+        )
         
-            genre_3d_df = pd.DataFrame({ 'Mean Popularity': genre_popularity_mean, 'Mean Duration (min)': genre_duration_mean, 'Explicit Content (%)': genre_explicitness_percentage
-            }).reset_index()
-        
-            genre_3d_df = genre_3d_df.fillna(0)
-        
-            # Plotly 3D scatter
-            fig = px.scatter_3d( genre_3d_df, x='Mean Popularity', y='Mean Duration (min)', z='Explicit Content (%)', color='genre', hover_name='genre',
-                hover_data={ 'Mean Popularity': ':.2f', 'Mean Duration (min)': ':.2f', 'Explicit Content (%)': ':.2f' },
-                title='<b>3D Multivariate Analysis: Genre Characteristics</b>',
-                height=700,
-                labels={ 'Mean Popularity': 'Mean Popularity (0-100)', 'Mean Duration (min)': 'Mean Duration (minutes)', 'Explicit Content (%)': 'Explicit Content (%)' }
-            )
-        
-            fig.update_layout(
-                scene_camera=dict( up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=1.5, y=1.5, z=1.5) ),
-                margin=dict(l=0, r=0, b=0, t=50), title_x=0.5, title_y=0.95, legend_title_text='<b>Genres</b>'
-            )
-        
-            # Render in Streamlit
-            st.plotly_chart(fig, width='stretch')
-        
-            # Insights expander
-            with st.expander("📊 Insights from 3D Genre Analysis"):
-                st.info("- Genres with **higher popularity** tend to cluster with moderate durations.")
-                st.info("- **Explicit content percentage** varies widely across genres, showing cultural differences.")
-                st.info("- The 3D view helps identify optimal combinations of duration, popularity, and explicitness for UK market penetration.")
-        
-            # Show aggregated data table
-            with st.expander("📋 Aggregated Genre Metrics Table"):
-                st.dataframe(genre_3d_df.style.format({ 'Mean Popularity': "{:.2f}", 'Mean Duration (min)': "{:.2f}", 'Explicit Content (%)': "{:.2f}" }))
+        # Render in Streamlit
+        st.plotly_chart(fig, width='stretch')
+    
+        # Insights expander
+        with st.expander("📊 Insights from 3D Genre Analysis"):
+            st.info("- Genres with **higher popularity** tend to cluster with moderate durations.")
+            st.info("- **Explicit content percentage** varies widely across genres, showing cultural differences.")
+            st.info("- The 3D view helps identify optimal combinations of duration, popularity, and explicitness for UK market penetration.")
+    
+        # Show aggregated data table
+        with st.expander("📋 Aggregated Genre Metrics Table"):
+            st.dataframe(genre_3d_df.style.format({ 'Mean Popularity': "{:.2f}", 'Mean Duration (min)': "{:.2f}", 'Explicit Content (%)': "{:.2f}" }))
         
         # Define a list of major genres and their definitions
         genre_definitions = {
@@ -2271,95 +2294,160 @@ with tab2:
             st.warning("Required data for 3D scatter plot not found. Please ensure the multivariate analysis section was run.")
         
         st.markdown('---')
+
     with tabs[5]:
         st.subheader("📌 Conclusion")
+        st.markdown("""
+        This section synthesizes insights from predictive modeling, feature engineering,
+        time series, genre analysis, and multivariate analysis to provide actionable strategies
+        for the UK music market.
+        """)
+    
+        # --- Best Model Summary ---
+        st.markdown("#### ⭐ Best Model Insights")
+        if 'accuracy_summary_df' in locals():
+            if is_any_filter_different:
+                # Compare baseline vs filtered model accuracies
+                overall_best_row = accuracy_summary_df.loc[accuracy_summary_df['Accuracy'].idxmax()]
+                st.success(f"🏆 Overall Best Model: **{overall_best_row['Model']}** with Accuracy = {overall_best_row['Accuracy']:.4f}")
+                st.info(f"Filtered Best Model: **{best_model_name}** with Accuracy = {best_model_accuracy:.4f}")
+                if overall_best_row['Model'] == best_model_name:
+                    st.success("Filtered subset mirrors baseline → same best model.")
+                else:
+                    st.warning("Filtered subset highlights a different best model → potential shift in predictive performance.")
+            else:
+                st.success(f"🏆 Best Performing Model (Baseline): **{best_model_name}** with Accuracy = {best_model_accuracy:.4f}")
+        else:
+            st.warning("Model accuracy summary not found. Please ensure predictive modeling section was run.")
+        
+        # --- Time Series Insight ---
+        if 'unique_artists_per_day' in locals():
+            st.markdown("#### 📈 Time Series Insights")
+            if is_any_filter_different:
+                overall_unique_artists = df_merged.groupby('date')['artist'].nunique()
+                filtered_unique_artists = filtered_df.groupby('date')['artist'].nunique()
+        
+                st.info(f"Overall Top 3 Days with Highest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}")
+                st.warning(f"Overall Bottom 3 Days with Lowest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}")
+        
+                st.info(f"Filtered Top 3 Days with Highest Artist Diversity: {', '.join(filtered_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}")
+                st.warning(f"Filtered Bottom 3 Days with Lowest Artist Diversity: {', '.join(filtered_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}")
+            else:
+                overall_unique_artists = df_merged.groupby('date')['artist'].nunique()
+                st.info(f"Top 3 Days with Highest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}")
+                st.warning(f"Bottom 3 Days with Lowest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}")
+        
+        # --- Multivariate Insight ---
+        st.markdown("#### 🔮 Multivariate Insights")
+        if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min','num_artists','popularity','chart_success']):
+            st.markdown("### 🔍 Multivariate Insights")
+            if is_any_filter_different:
+                overall_corr = df_merged[['duration_min','num_artists','popularity']].corr()
+                filtered_corr = filtered_df[['duration_min','num_artists','popularity']].corr()
+        
+                st.info("Overall Correlation Matrix (Top 3 strongest relationships):")
+                st.dataframe(overall_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
+        
+                st.info("Filtered Correlation Matrix (Top 3 strongest relationships):")
+                st.dataframe(filtered_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
+        
+                st.success("Filtered vs baseline correlations highlight how collaboration and duration interact differently under subset conditions.")
+            else:
+                overall_corr = df_merged[['duration_min','num_artists','popularity']].corr()
+                st.info("Baseline Correlation Matrix (Top 3 strongest relationships):")
+                st.dataframe(overall_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
         
         if len(filtered_df) == 0:
             with st.container():
                 st.warning("Please reload the website and wait for the OpenAI Model to predict and calculate Genre Specific Statistics for the entire date-range filter option. Then select any required date-range to see the conclusion.")
         else:
             with st.container():
-                st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
+                st.markdown("#### 🎵 Genre Insights")
         
                 if is_any_filter_different:
-                    # Headline metrics in columns
-                    col1, col2, col3 = st.columns(3)
-                    concentration_trend = 'more concentrated' if filtered_artist_concentration_index > artist_concentration_index else 'less concentrated' if filtered_artist_concentration_index < artist_concentration_index else 'similarly concentrated'
-                    explicit_trend = 'higher' if filtered_explicitness_percentage.get(True, 0) > explicitness_percentage.get(True, 0) else 'lower' if filtered_explicitness_percentage.get(True, 0) < explicitness_percentage.get(True, 0) else 'the same'
-                    duration_trend = 'shorter' if filtered_short_form_pct >= overall_short_form_pct else 'longer'
-        
-                    col1.metric("Artist Concentration", f"{filtered_artist_concentration_index:.2f}%", f"{filtered_artist_concentration_index - artist_concentration_index:.2f}% vs baseline")
-                    col2.metric("Explicit Content %", f"{filtered_explicitness_percentage.get(True, 0):.2f}%", f"{filtered_explicitness_percentage.get(True, 0) - explicitness_percentage.get(True, 0):.2f}% vs baseline")
-                    col3.metric("Avg Duration (min)", f"{filtered_df['duration_min'].mean():.2f}", f"{filtered_df['duration_min'].mean() - df_merged['duration_min'].mean():.2f} vs baseline")
-        
-                    # Narrative cards
-                    st.write(f"- The present filtered view is **{concentration_trend}** than the entire dataset.")
-                    st.write(f"- Content explicitness is **{explicit_trend}** than the full dataset baseline.")
-                    st.write(f"- The selected subset remains **{duration_trend}** in average track length compared to the overall UK market.")
-        
-                    # Genre composition by popularity
-                    with st.expander("🎶 Genre Popularity Insights"):
+                    # --- Genre Popularity ---
+                    with st.expander("🎶 **Genre Popularity Insights**"):
                         overall_genre_popularity = df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False)
                         filtered_genre_popularity = filtered_df.groupby('genre')['popularity'].mean().sort_values(ascending=False)
-                        overall_top3 = overall_genre_popularity.head(3).index.tolist()
-                        filtered_top3 = filtered_genre_popularity.head(3).index.tolist()
         
-                        if overall_top3 and filtered_top3:
-                            st.write(f"- Overall Top 3 Genres: **{', '.join(overall_top3)}**")
-                            st.write(f"- Filtered Top 3 Genres: **{', '.join(filtered_top3)}**")
-                            if overall_top3 == filtered_top3:
-                                st.success("Subset mirrors full dataset popularity trends → stable listener preferences.")
-                            else:
-                                st.info("Subset shows a different popularity mix → highlights emerging trends or niche preferences.")
+                        st.info(f"Overall Top 3 Genres: **{', '.join(overall_genre_popularity.head(3).index)}**")
+                        st.warning(f"Overall Bottom 3 Genres: **{', '.join(overall_genre_popularity.tail(3).index)}**")
+                        st.success(f"Filtered Top 3 Genres: **{', '.join(filtered_genre_popularity.head(3).index)}**")
+                        st.warning(f"Filtered Bottom 3 Genres: **{', '.join(filtered_genre_popularity.tail(3).index)}**")
         
-                    # Predictive modeling
-                    if 'rf_accuracy_eng' in locals() and 'rf_accuracy' in locals():
-                        better_model = 'with engineered features' if rf_accuracy_eng >= rf_accuracy_no_eng else 'without engineered features'
-                        with st.expander("📊 Predictive Modeling"):
-                            st.write(f"- Random Forest model **{better_model}** performs stronger for the current UK market slice.")
-                            st.markdown("- Reinforces the value of feature engineering in chart success forecasting.")
+                        if list(overall_genre_popularity.head(3).index) == list(filtered_genre_popularity.head(3).index):
+                            st.success("Subset mirrors full dataset popularity trends → stable listener preferences.")
+                        else:
+                            st.info("Subset shows a different popularity mix → highlights emerging trends or niche preferences.")
         
-                    st.info("Together, these dynamic conclusions highlight whether the current filter view reflects a representative market slice or a distinctive subsegment with unique preferences.")
+                    # --- Genre Explicitness ---
+                    with st.expander("⚡ **Genre Explicitness Insights**"):
+                        overall_explicitness = df_merged.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
+                        filtered_explicitness = filtered_df.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
+        
+                        st.info(f"Overall Most Explicit Genres: {', '.join(overall_explicitness.head(3).index)}")
+                        st.success(f"Overall Least Explicit Genres: {', '.join(overall_explicitness.tail(3).index)}")
+                        st.info(f"Filtered Most Explicit Genres: {', '.join(filtered_explicitness.head(3).index)}")
+                        st.success(f"Filtered Least Explicit Genres: {', '.join(filtered_explicitness.tail(3).index)}")
+        
+                    # --- Genre Duration ---
+                    with st.expander("⏳ **Genre Duration Insights**"):
+                        overall_duration = df_merged.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
+                        filtered_duration = filtered_df.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
+        
+                        st.info(f"Overall Longest Duration Genres: {', '.join(overall_duration.head(3).index)}")
+                        st.success(f"Overall Shortest Duration Genres: {', '.join(overall_duration.tail(3).index)}")
+                        st.info(f"Filtered Longest Duration Genres: {', '.join(filtered_duration.head(3).index)}")
+                        st.success(f"Filtered Shortest Duration Genres: {', '.join(filtered_duration.tail(3).index)}")
         
                 else:
-                    # Baseline case
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Artist Concentration", f"{filtered_artist_concentration_index:.2f}%")
-                    col2.metric("Explicit Content %", f"{filtered_explicitness_percentage.get(True, 0):.2f}%")
-                    col3.metric("Avg Duration (min)", f"{filtered_df['duration_min'].mean():.2f}")
+                    st.markdown("#### 🎵 Genre Insights")
+                    # --- Baseline Only (No Filter Applied) ---
+                    with st.expander("🎶 **Genre Popularity Insights**"):
+                        overall_genre_popularity = df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False)
+                        st.info(f"Top 3 Genres by Popularity: **{', '.join(overall_genre_popularity.head(3).index)}**")
+                        st.warning(f"Bottom 3 Genres by Popularity: **{', '.join(overall_genre_popularity.tail(3).index)}**")
         
-                    overall_genre_popularity = df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False)
-                    overall_top3 = overall_genre_popularity.head(3).index.tolist()
-                    if overall_top3:
-                        st.write(f"- Top 3 Genres by popularity: **{', '.join(overall_top3)}**, representing the most appealing genres in the UK music market.")
+                    with st.expander("⚡ **Genre Explicitness Insights**"):
+                        overall_explicitness = df_merged.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
+                        st.info(f"Most Explicit Genres: {', '.join(overall_explicitness.head(3).index)}")
+                        st.success(f"Least Explicit Genres: {', '.join(overall_explicitness.tail(3).index)}")
+        
+                    with st.expander("⏳ **Genre Duration Insights**"):
+                        overall_duration = df_merged.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
+                        st.info(f"Longest Duration Genres: {', '.join(overall_duration.head(3).index)}")
+                        st.success(f"Shortest Duration Genres: {', '.join(overall_duration.tail(3).index)}")
         
                     st.info("These baseline metrics provide a comprehensive view of the UK music market dynamics.")
         
+            st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
             st.success("✅ The dashboard is useful for Atlantic Recording Corporation to identify UK listener preference indicators, collaboration strengths, and content composition trends in real time.")
         
-            st.markdown("### 🎶 Memorable Ending")
             st.markdown("""
-            In the rhythm of data and the melody of insights, this dashboard transforms analytics into **market intelligence**.  
-            Just as every chart-topping track finds its perfect beat, every strategy here finds its **perfect note** —  
-            guiding the UK music industry toward harmony between artistry and audience.
+            🎵 In the rhythm of data, the melody takes flight,  
+            this dashboard turns numbers into **insightful light**.  
+            Like chart-topping tracks that find their beat,  
+            strategies here make the UK market complete.  
+            
+            From artistry’s spark to audience’s embrace,  
+            we harmonize trends in a balanced space.  
+            So let the metrics sing, let the visuals rhyme,  
+            guiding the industry in tempo and time. 🎶
             """)
             
         st.markdown("---")
         st.markdown(
-            "<div style='text-align: center; color: grey; font-size: 14px;'>"
-            "🔖 Dashboard created by <b>Prathamesh Bhurke</b>"
-            "</div>",
+            """
+            <div style='text-align: center; color: grey; font-size: 14px;'>
+                🔖 Dashboard created by <b>Prathamesh Bhurke</b><br>
+                <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis" target="_blank">
+                    📂 GitHub Repository
+                </a>
+                <a href="https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing" target="_blank">
+                    📑 Research Paper
+                </a>
+                
+            </div>
+            """,
             unsafe_allow_html=True
         )
-        st.markdown("---")
-        #st.markdown(
-        #    """
-        #    <div style='text-align: center; color: grey; font-size: 14px;'>
-        #        🔖 Dashboard created by <b>Prathamesh Bhurke</b><br>
-        #        <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis" target="_blank">
-        #            📂 GitHub Repository
-        #        </a>
-        #    </div>
-        #    """,
-        #    unsafe_allow_html=True
-        #)
