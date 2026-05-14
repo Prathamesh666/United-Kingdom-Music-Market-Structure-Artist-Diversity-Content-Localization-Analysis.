@@ -352,7 +352,7 @@ with tab1:
     
                 nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold', ax=ax)
     
-                ax.set_title('Artist Collaboration Network (Unique Collaborations)', size=20)
+                ax.set_title('Artist Collaboration Network', size=20)
                 ax.axis('off')
                 st.pyplot(fig)
     
@@ -2338,22 +2338,35 @@ with tab2:
                 st.warning(f"Bottom 3 Days with Lowest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}")
         
         # --- Multivariate Insight ---
-        st.markdown("#### 🔮 Multivariate Insights")
         if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min','num_artists','popularity','chart_success']):
-            st.markdown("### 🔍 Multivariate Insights")
+            st.markdown("### 🔮 Multivariate Insights")
             if is_any_filter_different:
                 overall_corr = df_merged[['duration_min','num_artists','popularity']].corr()
                 filtered_corr = filtered_df[['duration_min','num_artists','popularity']].corr()
-        
+                # Convert correlation matrix to a tidy DataFrame
+                overall_corr_df = (
+                    overall_corr.unstack() .reset_index() .rename(columns={'level_0': 'Variable 1', 'level_1': 'Variable 2', 0: 'Correlation'})
+                    .sort_values(by='Correlation', ascending=False) .drop_duplicates() .head(3)
+                )
+                
+                filtered_corr_df = (
+                    filtered_corr.unstack() .reset_index() .rename(columns={'level_0': 'Variable 1', 'level_1': 'Variable 2', 0: 'Correlation'}) 
+                    .sort_values(by='Correlation', ascending=False) .drop_duplicates() .head(3)
+                )
+                
                 st.info("Overall Correlation Matrix (Top 3 strongest relationships):")
-                st.dataframe(overall_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
-        
+                st.dataframe(overall_corr_df)
+                
                 st.info("Filtered Correlation Matrix (Top 3 strongest relationships):")
-                st.dataframe(filtered_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
+                st.dataframe(filtered_corr_df)
         
                 st.success("Filtered vs baseline correlations highlight how collaboration and duration interact differently under subset conditions.")
             else:
                 overall_corr = df_merged[['duration_min','num_artists','popularity']].corr()
+                overall_corr_df = (
+                    overall_corr.unstack() .reset_index() .rename(columns={'level_0': 'Variable 1', 'level_1': 'Variable 2', 0: 'Correlation'})
+                    .sort_values(by='Correlation', ascending=False) .drop_duplicates() .head(3)
+                )
                 st.info("Baseline Correlation Matrix (Top 3 strongest relationships):")
                 st.dataframe(overall_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
         
@@ -2401,7 +2414,6 @@ with tab2:
                         st.success(f"Filtered Shortest Duration Genres: {', '.join(filtered_duration.tail(3).index)}")
         
                 else:
-                    st.markdown("#### 🎵 Genre Insights")
                     # --- Baseline Only (No Filter Applied) ---
                     with st.expander("🎶 **Genre Popularity Insights**"):
                         overall_genre_popularity = df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False)
@@ -2422,23 +2434,20 @@ with tab2:
         
             st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
             st.success("✅ The dashboard is useful for Atlantic Recording Corporation to identify UK listener preference indicators, collaboration strengths, and content composition trends in real time.")
-        
-            st.markdown("""
-            🎵 In the rhythm of data, the melody takes flight,  
-            this dashboard turns numbers into **insightful light**.  
-            Like chart-topping tracks that find their beat,  
-            strategies here make the UK market complete.  
-            
-            From artistry’s spark to audience’s embrace,  
-            we harmonize trends in a balanced space.  
-            So let the metrics sing, let the visuals rhyme,  
-            guiding the industry in tempo and time. 🎶
-            """)
             
         st.markdown("---")
         st.markdown(
             """
             <div style='text-align: center; color: grey; font-size: 14px;'>
+                🎵 In the rhythm of data, the melody takes flight,  
+                <br>this dashboard turns numbers into **insightful light**.  
+                <br>Like chart-topping tracks that find their beat,  
+                <br>strategies here make the UK market complete.  
+                <br>
+                <br>From artistry’s spark to audience’s embrace,  
+                <br>we harmonize trends in a balanced space.  
+                <br>So let the metrics sing, let the visuals rhyme,  
+                <br>guiding the industry in tempo and time. 🎶<br>
                 🔖 Dashboard created by <b>Prathamesh Bhurke</b><br>
                 <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./" target="_blank">
                     📂 GitHub Repository
