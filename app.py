@@ -2339,7 +2339,7 @@ with tab2:
         
         # --- Multivariate Insight ---
         if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min','num_artists','popularity','chart_success']):
-            st.markdown("### 🔮 Multivariate Insights")
+            st.markdown("#### 🔮 Multivariate Insights")
             if is_any_filter_different:
                 overall_corr = df_merged[['duration_min','num_artists','popularity']].corr()
                 filtered_corr = filtered_df[['duration_min','num_artists','popularity']].corr()
