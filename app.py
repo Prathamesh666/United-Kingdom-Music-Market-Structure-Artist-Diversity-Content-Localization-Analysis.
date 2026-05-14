@@ -2440,7 +2440,7 @@ with tab2:
             """
             <div style='text-align: center; color: grey; font-size: 14px;'>
                 🔖 Dashboard created by <b>Prathamesh Bhurke</b><br>
-                <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis." target="_blank">
+                <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./" target="_blank">
                     📂 GitHub Repository
                 </a>
                 <a href="https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing" target="_blank">
