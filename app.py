@@ -30,7 +30,6 @@ warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transf
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
 st.logo("static/banner.png")
 st.sidebar.image("static/banner.png")
-# --- Intro ---
 st.header("🎵 Welcome to the United Kingdom's Music Market Dashboard!")
 st.markdown("""
 Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations.  
