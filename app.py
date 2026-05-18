@@ -30,8 +30,14 @@ warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transf
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
 st.logo("static/banner.png")
 st.sidebar.image("static/banner.png")
-st.header("Welcome to the **United Kingdom's Music Market Dashboard!**")
-st.write("This dashboard will provide insights into various aspects of the UK music market.")
+# --- Intro ---
+st.header("🎵 Welcome to the United Kingdom's Music Market Dashboard!")
+st.markdown("""
+Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations.  
+This dashboard uncovers patterns in **artist diversity, genre preferences, chart success, and listener behaviors**, helping you explore the forces shaping the Top 50 tracks.  
+
+Designed for analysts, enthusiasts, and professionals alike, it provides a **data‑driven lens** into the evolving UK music landscape.
+""")
 
 def assign_rank_group(position):
     if 1 <= position <= 10:
@@ -1642,10 +1648,23 @@ except Exception as e:
     
 # --- 4. Time Series Data (`unique_artists_per_day`) (from Section II, needed for dashboard) ---
 unique_artists_per_day = filtered_df.groupby('date')['artist'].nunique()
+# --- Save baseline unique artists per day once ---
+if "baseline_unique_artists_per_day" not in st.session_state:
+    st.session_state["baseline_unique_artists_per_day"] = (
+        df_merged.groupby('date')['artist'].nunique()
+    )
 print("Unique artists per day calculated for Time Series Analysis.")
 
 # --- 5. Genre Prediction Function and Application (from Section XV) ---
 # Conceptual definition of major genres
+from huggingface_hub import login
+# Try Streamlit secrets first
+hf_token = st.secrets.get("HF_TOKEN")
+if hf_token:
+    login(token=hf_token)
+else:
+    st.warning("⚠️ Hugging Face token not found. Please set HF_TOKEN in secrets.toml or .env")
+
 major_genres = ['Pop', 'Rock', 'Hip-Hop/Rap', 'Jazz', 'Country',
                 'Classical', 'Dance', 'R&B/soul', 'Electronic/EDM', 'Folk',
                 'Metal', 'Blues', 'Reggae', 'Instrumental', 'Indie',
@@ -1993,6 +2012,16 @@ with tab2:
     
         st.markdown('---')
     with tabs[1]:
+        # --- Save baseline engineered feature distributions once ---
+        if "baseline_day_of_week_counts" not in st.session_state:
+            st.session_state["baseline_day_of_week_counts"] = (df_merged.groupby('day_of_week')['chart_success'].value_counts())
+        
+        if "baseline_duration_x_num_artists" not in st.session_state:
+            st.session_state["baseline_duration_x_num_artists"] = df_merged[['duration_x_num_artists','popularity','chart_success']]
+        
+        if "baseline_explicit_duration" not in st.session_state:
+            st.session_state["baseline_explicit_duration"] = df_merged[['explicit_duration','chart_success']]
+        
         # --- Section 2: Feature Engineering Visualizations (Relevant to Chart Success) ---
         st.subheader("Feature Engineering Visualizations for Chart Success")
         st.markdown("""
@@ -2327,57 +2356,133 @@ with tab2:
                 st.success(f"🏆 Best Performing Model (Baseline): **{best_model_name}** with Accuracy = {best_model_accuracy:.4f}")
         else:
             st.warning("Model accuracy summary not found. Please ensure predictive modeling section was run.")
+            
+        st.markdown("#### 📊 Feature Engineering Comparison Insights")
+        if is_any_filter_different:
+            # --- Day of Week Comparison ---
+            with st.expander("📅 Chart Success by Day of Week (Baseline vs Filtered)"):
+                st.write("**Baseline:**")
+                st.dataframe(st.session_state["baseline_day_of_week_counts"].unstack(fill_value=0))
+                st.write("**Filtered:**")
+                st.dataframe(filtered_df.groupby('day_of_week')['chart_success'].value_counts().unstack(fill_value=0))
+        
+            # --- Duration × Num Artists Comparison ---
+            with st.expander("🎶 Duration × Num Artists vs Popularity (Baseline vs Filtered)"):
+                st.write("**Baseline Sample:**")
+                st.dataframe(st.session_state["baseline_duration_x_num_artists"].head(10))
+                st.write("**Filtered Sample:**")
+                st.dataframe(filtered_df[['duration_x_num_artists','popularity','chart_success']].head(10))
+        
+            # --- Explicit Duration Comparison ---
+            with st.expander("⚡ Explicit Duration by Chart Success (Baseline vs Filtered)"):
+                st.write("**Baseline:**")
+                st.dataframe(st.session_state["baseline_explicit_duration"].groupby('chart_success')['explicit_duration'].mean())
+                st.write("**Filtered:**")
+                st.dataframe(filtered_df.groupby('chart_success')['explicit_duration'].mean())
+        else:
+            # --- Baseline Only ---
+            with st.expander("📅 Chart Success by Day of Week (Baseline)"):
+                st.dataframe(st.session_state["baseline_day_of_week_counts"].unstack(fill_value=0))
+        
+            with st.expander("🎶 Duration × Num Artists vs Popularity (Baseline)"):
+                st.dataframe(st.session_state["baseline_duration_x_num_artists"].head(10))
+        
+            with st.expander("⚡ Explicit Duration by Chart Success (Baseline)"):
+                st.dataframe(st.session_state["baseline_explicit_duration"].groupby('chart_success')['explicit_duration'].mean())
         
         # --- Time Series Insight ---
         if 'unique_artists_per_day' in locals():
             st.markdown("#### 📈 Time Series Insights")
+        
             if is_any_filter_different:
-                overall_unique_artists = df_merged.groupby('date')['artist'].nunique()
+                overall_unique_artists = st.session_state["baseline_unique_artists_per_day"]
                 filtered_unique_artists = filtered_df.groupby('date')['artist'].nunique()
         
-                st.info(f"Overall Top 3 Days with Highest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}")
-                st.warning(f"Overall Bottom 3 Days with Lowest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}")
+                st.info(
+                    f"Overall Top 3 Days with Highest Artist Diversity: "
+                    f"{', '.join(overall_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}"
+                )
+                st.warning(
+                    f"Overall Bottom 3 Days with Lowest Artist Diversity: "
+                    f"{', '.join(overall_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}"
+                )
         
-                st.info(f"Filtered Top 3 Days with Highest Artist Diversity: {', '.join(filtered_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}")
-                st.warning(f"Filtered Bottom 3 Days with Lowest Artist Diversity: {', '.join(filtered_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}")
+                st.info(
+                    f"Filtered Top 3 Days with Highest Artist Diversity: "
+                    f"{', '.join(filtered_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}"
+                )
+                st.warning(
+                    f"Filtered Bottom 3 Days with Lowest Artist Diversity: "
+                    f"{', '.join(filtered_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}"
+                )
             else:
-                overall_unique_artists = df_merged.groupby('date')['artist'].nunique()
-                st.info(f"Top 3 Days with Highest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}")
-                st.warning(f"Bottom 3 Days with Lowest Artist Diversity: {', '.join(overall_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}")
+                overall_unique_artists = st.session_state["baseline_unique_artists_per_day"]
+        
+                st.info(
+                    f"Top 3 Days with Highest Artist Diversity: "
+                    f"{', '.join(overall_unique_artists.sort_values(ascending=False).head(3).index.astype(str))}"
+                )
+                st.warning(
+                    f"Bottom 3 Days with Lowest Artist Diversity: "
+                    f"{', '.join(overall_unique_artists.sort_values(ascending=True).head(3).index.astype(str))}"
+                )
+        
+        # --- Multivariate Insight ---
+        def get_top_correlations(df, cols, n=3):
+            """
+            Compute top correlations among selected columns in tidy format.
+            Removes self-correlations and duplicate pairs (e.g., num-popularity vs popularity-num).
+            Returns top n strongest relationships.
+            """
+            corr = df[cols].corr()
+            corr_df = (
+                corr.unstack()
+                .reset_index()
+                .rename(columns={'level_0': 'Variable 1', 'level_1': 'Variable 2', 0: 'Correlation'})
+                .query("`Variable 1` != `Variable 2`")   # remove self-correlations
+            )
+        
+            # Ensure consistent ordering of variable pairs to avoid duplicates
+            corr_df["Pair"] = corr_df.apply(
+                lambda row: tuple(sorted([row["Variable 1"], row["Variable 2"]])), axis=1
+            )
+            corr_df = corr_df.drop_duplicates(subset="Pair")
+        
+            # Sort by absolute correlation strength
+            corr_df = corr_df.sort_values(by="Correlation", ascending=False).head(n)
+        
+            return corr_df[["Variable 1", "Variable 2", "Correlation"]]
         
         # --- Multivariate Insight ---
         if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min','num_artists','popularity','chart_success']):
             st.markdown("#### 🔮 Multivariate Insights")
+        
             if is_any_filter_different:
-                overall_corr = df_merged[['duration_min','num_artists','popularity']].corr()
-                filtered_corr = filtered_df[['duration_min','num_artists','popularity']].corr()
-                # Convert correlation matrix to a tidy DataFrame
-                overall_corr_df = (
-                    overall_corr.unstack() .reset_index() .rename(columns={'level_0': 'Variable 1', 'level_1': 'Variable 2', 0: 'Correlation'})
-                    .sort_values(by='Correlation', ascending=False) .drop_duplicates() .head(3)
-                )
-                
-                filtered_corr_df = (
-                    filtered_corr.unstack() .reset_index() .rename(columns={'level_0': 'Variable 1', 'level_1': 'Variable 2', 0: 'Correlation'}) 
-                    .sort_values(by='Correlation', ascending=False) .drop_duplicates() .head(3)
-                )
-                
+                overall_corr_df = get_top_correlations(df_merged, ['duration_min','num_artists','popularity'])
+                filtered_corr_df = get_top_correlations(filtered_df, ['duration_min','num_artists','popularity'])
+        
                 st.info("Overall Correlation Matrix (Top 3 strongest relationships):")
-                st.dataframe(overall_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
-                
+                st.dataframe(overall_corr_df)
+        
                 st.info("Filtered Correlation Matrix (Top 3 strongest relationships):")
-                st.dataframe(filtered_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
+                st.dataframe(filtered_corr_df)
         
                 st.success("Filtered vs baseline correlations highlight how collaboration and duration interact differently under subset conditions.")
             else:
-                overall_corr = df_merged[['duration_min','num_artists','popularity']].corr()
-                overall_corr_df = (
-                    overall_corr.unstack() .reset_index() .rename(columns={'level_0': 'Variable 1', 'level_1': 'Variable 2', 0: 'Correlation'})
-                    .sort_values(by='Correlation', ascending=False) .drop_duplicates() .head(3)
-                )
-                st.info("Baseline Correlation Matrix (Top 3 strongest relationships):")
-                st.dataframe(overall_corr.unstack().sort_values(ascending=False).drop_duplicates().head(3))
+                overall_corr_df = get_top_correlations(df_merged, ['duration_min','num_artists','popularity'])
         
+                st.info("Baseline Correlation Matrix (Top 3 strongest relationships):")
+                st.dataframe(overall_corr_df)
+        
+        # --- Save baseline genre metrics once ---
+        if "baseline_genre_popularity" not in st.session_state:
+            st.session_state["baseline_genre_popularity"] = (df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False))
+        if "baseline_genre_explicitness" not in st.session_state:
+            st.session_state["baseline_genre_explicitness"] = (df_merged.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100)
+        if "baseline_genre_duration" not in st.session_state:
+            st.session_state["baseline_genre_duration"] = (df_merged.groupby('genre')['duration_min'].mean().sort_values(ascending=False))
+        
+        # --- Genre Insights ---
         if len(filtered_df) == 0:
             with st.container():
                 st.warning("Please reload the website and wait for the OpenAI Model to predict and calculate Genre Specific Statistics for the baseline metrics. Then select any required custom filter option to see the conclusion.")
@@ -2388,8 +2493,10 @@ with tab2:
                 if is_any_filter_different:
                     # --- Genre Popularity ---
                     with st.expander("🎶 **Genre Popularity Insights**"):
-                        overall_genre_popularity = df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False)
-                        filtered_genre_popularity = filtered_df.groupby('genre')['popularity'].mean().sort_values(ascending=False)
+                        overall_genre_popularity = st.session_state["baseline_genre_popularity"]
+                        filtered_genre_popularity = (
+                            filtered_df.groupby('genre')['popularity'].mean().sort_values(ascending=False)
+                        )
         
                         st.info(f"Overall Top 3 Genres: **{', '.join(overall_genre_popularity.head(3).index)}**")
                         st.warning(f"Overall Bottom 3 Genres: **{', '.join(overall_genre_popularity.tail(3).index)}**")
@@ -2403,8 +2510,10 @@ with tab2:
         
                     # --- Genre Explicitness ---
                     with st.expander("⚡ **Genre Explicitness Insights**"):
-                        overall_explicitness = df_merged.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
-                        filtered_explicitness = filtered_df.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
+                        overall_explicitness = st.session_state["baseline_genre_explicitness"]
+                        filtered_explicitness = (
+                            filtered_df.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
+                        )
         
                         st.info(f"Overall Most Explicit Genres: {', '.join(overall_explicitness.head(3).index)}")
                         st.success(f"Overall Least Explicit Genres: {', '.join(overall_explicitness.tail(3).index)}")
@@ -2413,8 +2522,10 @@ with tab2:
         
                     # --- Genre Duration ---
                     with st.expander("⏳ **Genre Duration Insights**"):
-                        overall_duration = df_merged.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
-                        filtered_duration = filtered_df.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
+                        overall_duration = st.session_state["baseline_genre_duration"]
+                        filtered_duration = (
+                            filtered_df.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
+                        )
         
                         st.info(f"Overall Longest Duration Genres: {', '.join(overall_duration.head(3).index)}")
                         st.success(f"Overall Shortest Duration Genres: {', '.join(overall_duration.tail(3).index)}")
@@ -2424,20 +2535,21 @@ with tab2:
                 else:
                     # --- Baseline Only (No Filter Applied) ---
                     with st.expander("🎶 **Genre Popularity Insights**"):
-                        overall_genre_popularity = df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False)
+                        overall_genre_popularity = st.session_state["baseline_genre_popularity"]
                         st.info(f"Top 3 Genres by Popularity: **{', '.join(overall_genre_popularity.head(3).index)}**")
                         st.warning(f"Bottom 3 Genres by Popularity: **{', '.join(overall_genre_popularity.tail(3).index)}**")
         
                     with st.expander("⚡ **Genre Explicitness Insights**"):
-                        overall_explicitness = df_merged.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
+                        overall_explicitness = st.session_state["baseline_genre_explicitness"]
                         st.info(f"Most Explicit Genres: {', '.join(overall_explicitness.head(3).index)}")
                         st.success(f"Least Explicit Genres: {', '.join(overall_explicitness.tail(3).index)}")
         
                     with st.expander("⏳ **Genre Duration Insights**"):
-                        overall_duration = df_merged.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
+                        overall_duration = st.session_state["baseline_genre_duration"]
                         st.info(f"Longest Duration Genres: {', '.join(overall_duration.head(3).index)}")
                         st.success(f"Shortest Duration Genres: {', '.join(overall_duration.tail(3).index)}")
         
+                    st.info("These baseline metrics provide a comprehensive view of the UK music market dynamics.")
                     st.info("These baseline metrics provide a comprehensive view of the UK music market dynamics.")
         
             st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
@@ -2448,18 +2560,18 @@ with tab2:
             """
             <div style='text-align: center; color: grey; font-size: 14px;'>
                 🎵 In the rhythm of data, the melody takes flight,  
-                <br>this dashboard turns numbers into **insightful light**.  
+                <br>this dashboard turns numbers into <b>insightful light</b>.  
                 <br>Like chart-topping tracks that find their beat,  
                 <br>strategies here make the UK market complete.  
                 <br>
                 <br>From artistry’s spark to audience’s embrace,  
                 <br>we harmonize trends in a balanced space.  
-                <br>So let the metrics sing, let the visuals rhyme,  
+                <br>So let the metrics sing, let the <b>visuals rhyme</b>,  
                 <br>guiding the industry in tempo and time. 🎶<br><hr>
-                🔖 Dashboard created by <b>Prathamesh Bhurke</b><br>
+                🔖 Created & Powered by <b>Prathamesh Bhurke</b><br>
                 <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./" target="_blank">
                     📂 GitHub Repository
-                </a>
+                </a><br>
                 <a href="https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing" target="_blank">
                     📑 Research Paper
                 </a>
