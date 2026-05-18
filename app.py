@@ -176,7 +176,7 @@ with st.spinner("⏳ Loading date range filter..."):
     min_date = df_merged['date'].min().date()
     max_date = df_merged['date'].max().date()
     date_range = st.sidebar.date_input(
-        'Select Date Range',
+        'Date Range',
         value=(min_date, max_date),
         min_value=min_date,
         max_value=max_date
@@ -195,7 +195,7 @@ mask = (
 with st.spinner("⏳ Loading artist filter..."):
     all_artists = sorted(df_merged['artist'].unique())
     selected_artists = st.sidebar.multiselect(
-        'Filter by Artist',
+        'Artist',
         options=all_artists,
         default=all_artists
     )
@@ -217,7 +217,7 @@ with st.spinner("⏳ Loading track type filter..."):
 with st.spinner("⏳ Loading album type filter..."):
     all_album_types = sorted(df_merged['album_type'].unique())
     selected_album_types = st.sidebar.multiselect(
-        'Filter by Album Type',
+        'Album Type',
         options=all_album_types,
         default=all_album_types
     )
@@ -227,7 +227,7 @@ with st.spinner("⏳ Loading album type filter..."):
 # --- Duration Interval Filter ---
 with st.spinner("⏳ Loading duration filter..."):
     duration_range = st.sidebar.slider(
-        'Filter by Duration Interval (minutes)',
+        'Duration Interval (minutes) Of Songs',
         min_value=0, max_value=10,
         value=(0, 10)
     )
@@ -237,7 +237,7 @@ with st.spinner("⏳ Loading duration filter..."):
 with st.spinner("⏳ Loading popularity filter..."):
     pop_min, pop_max = int(df_merged['popularity'].min()), int(df_merged['popularity'].max())
     selected_popularity = st.sidebar.slider(
-        'Filter by Popularity',
+        'Popularity',
         min_value=0, max_value=100,
         value=(pop_min, pop_max)
     )
@@ -1763,7 +1763,7 @@ print("Conceptual AI-driven genre prediction function defined.\nGenre Prediction
 # --- Genre Filter (20 major genres) ---
 with st.spinner("⏳ Loading genre filter... this may take a few minutes"):
     selected_genres = st.sidebar.multiselect(
-        'Filter by Genre',
+        'Genre',
         options=major_genres,
         default=major_genres
     )
