@@ -2552,7 +2552,6 @@ with tab2:
                         st.success(f"Shortest Duration Genres: {', '.join(overall_duration.tail(3).index)}")
         
                     st.info("These baseline metrics provide a comprehensive view of the UK music market dynamics.")
-                    st.info("These baseline metrics provide a comprehensive view of the UK music market dynamics.")
         
             st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
             st.success("✅ The dashboard is useful for Atlantic Recording Corporation to identify UK listener preference indicators, collaboration strengths, and content composition trends in real time.")
