@@ -33,7 +33,7 @@ st.sidebar.image("static/banner.png")
 st.header("🎵 Welcome to the United Kingdom's Music Market Dashboard!")
 st.markdown("""
 Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations.  
-This dashboard uncovers patterns in **artist diversity, genre preferences, chart success, and listener behaviors**, helping you explore the forces shaping the Top 50 tracks.  
+This dashboard uncovers patterns in **artist diversity, genre preferences, chart success, and listener behaviors**, helping you explore the forces shaping the Top tracks.  
 
 Designed for analysts, enthusiasts, and professionals alike, it provides a **data‑driven lens** into the evolving UK music landscape.
 """)
