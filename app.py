@@ -28,8 +28,8 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
 
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
+st.logo("static/banner.png")
 st.sidebar.image("static/banner.png")
-    
 st.header("Welcome to the **United Kingdom's Music Market Dashboard!**")
 st.write("This dashboard will provide insights into various aspects of the UK music market.")
 
@@ -105,7 +105,7 @@ else:
     df = pd.read_csv('Atlantic_United_Kingdom.csv')
     df_merged = validate_and_preprocess(df)
 
-st.write("Data loaded and preprocessed successfully.")
+st.caption("Data loaded and preprocessed successfully.")
 
 # --- KPI Calculations ---
 
@@ -161,7 +161,7 @@ duration_counts = df_merged['duration_category'].value_counts()
 total_tracks_duration = duration_counts.sum()
 duration_percentage = (duration_counts / total_tracks_duration) * 100
 
-st.write("KPIs calculated successfully.")
+st.caption("KPIs calculated successfully.")
 
 st.sidebar.header('Filter Options')
 
@@ -270,6 +270,7 @@ tab1, tab2 = st.tabs(["UK Music Market Structural Analysis",
                     "Recommendational Analysis for UK's Music Listeners"])
 
 with tab1:
+    st.balloons()
     st.title('United Kingdom Music Market Structural Analysis')
     # Tabs for each subheader
     tabs = st.tabs([
@@ -1103,7 +1104,6 @@ with tab1:
                 st.metric("Preference", "Balanced Format")
     
         st.divider()
-    
         
     with tabs[7]:
         st.subheader("📊 Key Insights and Findings")
@@ -1428,212 +1428,219 @@ df_merged['chart_success'] = (df_merged['position'] <= 10).astype(int)
 # Select features for Logistic Regression
 features_lr = ['duration_min', 'num_artists', 'is_explicit']
 categorical_features_lr = ['album_type', 'duration_category']
-
 df_temp_lr = df_merged[features_lr + categorical_features_lr].copy()
-X_lr = pd.get_dummies(df_temp_lr, columns=categorical_features_lr, drop_first=True)
-y_lr = df_merged['chart_success']
 
-X_train_no_eng, X_test_no_eng, y_train_no_eng, y_test_no_eng = train_test_split(X_lr, y_lr, test_size=0.2, random_state=42, stratify=y_lr)
-
-# Helper function for metrics
-def get_metrics(y_true, y_pred, model_name):
-    acc = accuracy_score(y_true, y_pred)
-    metrics_df = pd.DataFrame(classification_report(y_true, y_pred, output_dict=True)).transpose()
-    metrics_df = metrics_df.drop(labels=['accuracy','macro avg','weighted avg'])
-    metrics_df.rename(index={'0':'Class 0 (Not Top 10)','1':'Class 1 (Top 10)'}, inplace=True)
-    return acc, metrics_df
-
-model_lr = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
-model_lr.fit(X_train_no_eng, y_train_no_eng)
-y_pred_lr = model_lr.predict(X_test_no_eng)
-lr_accuracy_no_eng, metrics_df = get_metrics(y_test_no_eng, y_pred_lr, "Logistic Regression (No Features)")
-
-# --- Module 2: Linear Regression ---
-linear_model_no_eng = LinearRegression()
-linear_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
-linear_y_pred_no_eng = linear_model_no_eng.predict(X_test_no_eng)
-Lr_accuracy_no_eng = accuracy_score(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int))
-Lr_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
-Lr_metrics_df_no_eng = Lr_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-Lr_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-
-# --- Model 3: Random Forest (No Engineered Features) ---
-# Use the same feature set as Logistic Regression for comparison without engineered features
-rf_model_no_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-rf_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
-rf_y_pred_no_eng = rf_model_no_eng.predict(X_test_no_eng)
-rf_accuracy_no_eng, rf_metrics_df_no_eng = get_metrics(y_test_no_eng, rf_y_pred_no_eng, "Random Forest (No Features)")
-
-# --- Model 4: XGBoost (No Engineered Features) ---
-xgb_model_no_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
-    scale_pos_weight=(len(y_train_no_eng) - y_train_no_eng.sum()) / y_train_no_eng.sum()) # Handle class imbalance
-xgb_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
-xgb_y_pred_no_eng = xgb_model_no_eng.predict(X_test_no_eng)
-xgb_accuracy_no_eng, xgb_metrics_df_no_eng = get_metrics(y_test_no_eng, xgb_y_pred_no_eng, "XGBoost (No Features)")
-
-# --- Model 5: K-Means Clustering ---
-kmeans_no_eng = KMeans(n_clusters=2, random_state=42)
-kmeans_no_eng.fit(X_train_no_eng)
-kmeans_labels_no_eng = kmeans_no_eng.predict(X_test_no_eng)
-kmeans_accuracy_no_eng, kmeans_metrics_df_no_eng = get_metrics(y_test_no_eng, kmeans_labels_no_eng, "KMeans (No Features)")
-
-# --- Model 6: SVM ---
-svm_no_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
-svm_no_eng.fit(X_train_no_eng, y_train_no_eng)
-svm_y_pred_no_eng = svm_no_eng.predict(X_test_no_eng)
-svm_accuracy_no_eng, svm_metrics_df_no_eng = get_metrics(y_test_no_eng, svm_y_pred_no_eng, "SVM (No Features)")
-
-# --- Model 7: Gradient Boosting ---
-gb_no_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
-gb_no_eng.fit(X_train_no_eng, y_train_no_eng)
-gb_y_pred_no_eng = gb_no_eng.predict(X_test_no_eng)
-gb_accuracy_no_eng, gb_metrics_df_no_eng = get_metrics(y_test_no_eng, gb_y_pred_no_eng, "Gradient Boosting (No Features)")
-
-# --- Model 8: Gaussian Mixture ---
-gmm_no_eng = GaussianMixture(n_components=2, random_state=42)
-gmm_no_eng.fit(X_train_no_eng)
-gmm_labels_no_eng = gmm_no_eng.predict(X_test_no_eng)
-gmm_accuracy_no_eng, gmm_metrics_df_no_eng = get_metrics(y_test_no_eng, gmm_labels_no_eng, "Gaussian Mixture (No Features)")
-
-# --- 3.1 Predictive Modeling For Chart Success (With Engineered Features) ---
-features_engineered_rf = [
-    'duration_min', 'num_artists', 'is_explicit',
-    'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration'
-]
-categorical_features_rf_eng = ['album_type', 'duration_category']
-
-df_temp_engineered_rf = df_merged[features_engineered_rf + categorical_features_rf_eng].copy()
-X_engineered_rf = pd.get_dummies(df_temp_engineered_rf, columns=categorical_features_rf_eng, drop_first=True)
-y_engineered_rf = df_merged['chart_success']
-
-X_train_eng, X_test_eng, y_train_eng, y_test_eng = train_test_split(X_engineered_rf, y_engineered_rf, test_size=0.2, random_state=42, stratify=y_engineered_rf)
-
-# --- Model 1: Logistic Regression ---
-lr_model_eng = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
-lr_model_eng.fit(X_train_eng, y_train_eng)
-lr_y_pred_eng = lr_model_eng.predict(X_test_eng)
-lr_accuracy_eng, lr_metrics_eng_df = get_metrics(y_test_eng, lr_y_pred_eng, "Logistic Regression (Engineered Features)")
-
-# --- Model 2: Linear Regression ---
-Lr_model_eng = LinearRegression()
-Lr_model_eng.fit(X_train_eng, y_train_eng)
-Lr_y_pred_eng = Lr_model_eng.predict(X_test_eng)
-Lr_accuracy_eng = accuracy_score(y_test_eng, (Lr_y_pred_eng> 0.5).astype(int))
-Lr_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, (Lr_y_pred_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
-Lr_metrics_eng_df = Lr_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-Lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-
-# --- Model 3: Random Forest ---
-rf_model_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-rf_model_eng.fit(X_train_eng, y_train_eng)
-rf_y_pred_eng = rf_model_eng.predict(X_test_eng)
-rf_accuracy_eng, rf_metrics_eng_df = get_metrics(y_test_eng, rf_y_pred_eng, "Random Forest (Engineered Features)")
-
-# --- Model 4: XGBoost ---
-xgb_model_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
-    scale_pos_weight=(len(y_train_eng) - y_train_eng.sum()) / y_train_eng.sum()) # Handle class imbalance
-xgb_model_eng.fit(X_train_eng, y_train_eng)
-xgb_y_pred_eng = xgb_model_eng.predict(X_test_eng)
-xgb_accuracy_eng, xgb_metrics_eng_df = get_metrics(y_test_eng, xgb_y_pred_eng, "XGBoost (Engineered Features)")
-
-# --- Model 5: KMeans --- 
-kmeans_eng = KMeans(n_clusters=2, random_state=42)
-kmeans_eng.fit(X_train_eng)
-kmeans_labels_eng = kmeans_eng.predict(X_test_eng)
-kmeans_accuracy_eng, kmeans_metrics_df_eng = get_metrics(y_test_eng, kmeans_labels_eng, "KMeans (Engineered Features)")
-
-# --- Model 6: SVM --- 
-svm_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
-svm_eng.fit(X_train_eng, y_train_eng)
-svm_y_pred_eng = svm_eng.predict(X_test_eng)
-svm_accuracy_eng, svm_metrics_df_eng = get_metrics(y_test_eng, svm_y_pred_eng, "SVM (Engineered Features)")
-
-# --- Model 7: Gradient Boosting --- 
-gb_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
-gb_eng.fit(X_train_eng, y_train_eng)
-gb_y_pred_eng = gb_eng.predict(X_test_eng)
-gb_accuracy_eng, gb_metrics_df_eng = get_metrics(y_test_eng, gb_y_pred_eng, "Gradient Boosting (Engineered Features)")
-
-# --- Model 8: Gaussian Mixture --- 
-gmm_eng = GaussianMixture(n_components=2, random_state=42)
-gmm_eng.fit(X_train_eng)
-gmm_labels_eng = gmm_eng.predict(X_test_eng)
-gmm_accuracy_eng, gmm_metrics_df_eng = get_metrics(y_test_eng, gmm_labels_eng, "Gaussian Mixture (Engineered Features)")
-
-# --- 3.3 Model Comparison DataFrames for All Models ---
-
-def build_comparison_df(metrics_no_eng_df, metrics_eng_df, model_name):
-    comparison_data = []
-    metrics_no_eng_dict = metrics_no_eng_df.to_dict('index')
-    metrics_eng_dict = metrics_eng_df.to_dict('index')
-
-    for class_name_key in metrics_no_eng_dict:
-        metrics = metrics_no_eng_dict[class_name_key]
-        comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-        comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-        comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-
-    for class_name_key in metrics_eng_dict:
-        metrics = metrics_eng_dict[class_name_key]
-        comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-        comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-        comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-
-    return pd.DataFrame(comparison_data)
-
-# Build comparison DataFrames for each model
-lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
-linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
-rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
-xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_eng_df, "XGBoost")
-kmeans_comparison_df = build_comparison_df(kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, "KMeans")
-svm_comparison_df = build_comparison_df(svm_metrics_df_no_eng, svm_metrics_df_eng, "SVM")
-gb_comparison_df = build_comparison_df(gb_metrics_df_no_eng, gb_metrics_df_eng, "Gradient Boosting")
-gmm_comparison_df = build_comparison_df(gmm_metrics_df_no_eng, gmm_metrics_df_eng, "Gaussian Mixture")
-
-# Combine all into one master comparison DataFrame
-all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
-                                    kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
-
-print("All model comparison dataframe created.")
-
-# Create comparison_df for plotting RF performance with/without engineered features
-comparison_data = []
-
-rf_metrics_no_eng_dict = rf_metrics_df_no_eng.to_dict('index')
-rf_metrics_with_eng_dict = rf_metrics_eng_df.to_dict('index')
-
-for class_name_key in rf_metrics_no_eng_dict:
-    metrics = rf_metrics_no_eng_dict[class_name_key]
-    comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-    comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-    comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-
-for class_name_key in rf_metrics_with_eng_dict:
-    metrics = rf_metrics_with_eng_dict[class_name_key]
-    comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-    comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-    comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-
-comparison_df = pd.DataFrame(comparison_data)
-
-# --- 3.4 Model Accuracy Comparison DataFrames to find best model ---
-# Create a DataFrame for the summary table
-accuracy_summary_df = pd.DataFrame({
-    'Model': [
-        'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
-        'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
-        'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)', 'KMeans (No Features)', 'KMeans (Engineered Features)',
-        'SVM (No Features)', 'SVM (Engineered Features)', 'Gradient Boosting (No Features)', 'Gradient Boosting (Engineered Features)',
-        'Gaussian Mixture (No Features)', 'Gaussian Mixture (Engineered Features)'
-    ],
-    'Accuracy': [
-        lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng,
-        kmeans_accuracy_no_eng, kmeans_accuracy_eng, svm_accuracy_no_eng, svm_accuracy_eng, gb_accuracy_no_eng, gb_accuracy_eng, gmm_accuracy_no_eng, gmm_accuracy_eng
+try: 
+    X_lr = pd.get_dummies(df_temp_lr, columns=categorical_features_lr, drop_first=True)
+    y_lr = df_merged['chart_success']
+    
+    X_train_no_eng, X_test_no_eng, y_train_no_eng, y_test_no_eng = train_test_split(X_lr, y_lr, test_size=0.2, random_state=42, stratify=y_lr)
+    
+    # Helper function for metrics
+    def get_metrics(y_true, y_pred, model_name):
+        acc = accuracy_score(y_true, y_pred)
+        metrics_df = pd.DataFrame(classification_report(y_true, y_pred, output_dict=True)).transpose()
+        metrics_df = metrics_df.drop(labels=['accuracy','macro avg','weighted avg'])
+        metrics_df.rename(index={'0':'Class 0 (Not Top 10)','1':'Class 1 (Top 10)'}, inplace=True)
+        return acc, metrics_df
+    
+    model_lr = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
+    model_lr.fit(X_train_no_eng, y_train_no_eng)
+    y_pred_lr = model_lr.predict(X_test_no_eng)
+    lr_accuracy_no_eng, metrics_df = get_metrics(y_test_no_eng, y_pred_lr, "Logistic Regression (No Features)")
+    
+    # --- Module 2: Linear Regression ---
+    linear_model_no_eng = LinearRegression()
+    linear_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    linear_y_pred_no_eng = linear_model_no_eng.predict(X_test_no_eng)
+    Lr_accuracy_no_eng = accuracy_score(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int))
+    Lr_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
+    Lr_metrics_df_no_eng = Lr_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+    Lr_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+    
+    # --- Model 3: Random Forest (No Engineered Features) ---
+    # Use the same feature set as Logistic Regression for comparison without engineered features
+    rf_model_no_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+    rf_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    rf_y_pred_no_eng = rf_model_no_eng.predict(X_test_no_eng)
+    rf_accuracy_no_eng, rf_metrics_df_no_eng = get_metrics(y_test_no_eng, rf_y_pred_no_eng, "Random Forest (No Features)")
+    
+    # --- Model 4: XGBoost (No Engineered Features) ---
+    xgb_model_no_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
+        scale_pos_weight=(len(y_train_no_eng) - y_train_no_eng.sum()) / y_train_no_eng.sum()) # Handle class imbalance
+    xgb_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    xgb_y_pred_no_eng = xgb_model_no_eng.predict(X_test_no_eng)
+    xgb_accuracy_no_eng, xgb_metrics_df_no_eng = get_metrics(y_test_no_eng, xgb_y_pred_no_eng, "XGBoost (No Features)")
+    
+    # --- Model 5: K-Means Clustering ---
+    kmeans_no_eng = KMeans(n_clusters=2, random_state=42)
+    kmeans_no_eng.fit(X_train_no_eng)
+    kmeans_labels_no_eng = kmeans_no_eng.predict(X_test_no_eng)
+    kmeans_accuracy_no_eng, kmeans_metrics_df_no_eng = get_metrics(y_test_no_eng, kmeans_labels_no_eng, "KMeans (No Features)")
+    
+    # --- Model 6: SVM ---
+    svm_no_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
+    svm_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    svm_y_pred_no_eng = svm_no_eng.predict(X_test_no_eng)
+    svm_accuracy_no_eng, svm_metrics_df_no_eng = get_metrics(y_test_no_eng, svm_y_pred_no_eng, "SVM (No Features)")
+    
+    # --- Model 7: Gradient Boosting ---
+    gb_no_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
+    gb_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    gb_y_pred_no_eng = gb_no_eng.predict(X_test_no_eng)
+    gb_accuracy_no_eng, gb_metrics_df_no_eng = get_metrics(y_test_no_eng, gb_y_pred_no_eng, "Gradient Boosting (No Features)")
+    
+    # --- Model 8: Gaussian Mixture ---
+    gmm_no_eng = GaussianMixture(n_components=2, random_state=42)
+    gmm_no_eng.fit(X_train_no_eng)
+    gmm_labels_no_eng = gmm_no_eng.predict(X_test_no_eng)
+    gmm_accuracy_no_eng, gmm_metrics_df_no_eng = get_metrics(y_test_no_eng, gmm_labels_no_eng, "Gaussian Mixture (No Features)")
+    
+    # --- 3.1 Predictive Modeling For Chart Success (With Engineered Features) ---
+    features_engineered_rf = [
+        'duration_min', 'num_artists', 'is_explicit',
+        'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration'
     ]
-})
-print("Model comparison dataframes created.")
+    categorical_features_rf_eng = ['album_type', 'duration_category']
+    
+    df_temp_engineered_rf = df_merged[features_engineered_rf + categorical_features_rf_eng].copy()
+    X_engineered_rf = pd.get_dummies(df_temp_engineered_rf, columns=categorical_features_rf_eng, drop_first=True)
+    y_engineered_rf = df_merged['chart_success']
+    
+    X_train_eng, X_test_eng, y_train_eng, y_test_eng = train_test_split(X_engineered_rf, y_engineered_rf, test_size=0.2, random_state=42, stratify=y_engineered_rf)
+    
+    # --- Model 1: Logistic Regression ---
+    lr_model_eng = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
+    lr_model_eng.fit(X_train_eng, y_train_eng)
+    lr_y_pred_eng = lr_model_eng.predict(X_test_eng)
+    lr_accuracy_eng, lr_metrics_eng_df = get_metrics(y_test_eng, lr_y_pred_eng, "Logistic Regression (Engineered Features)")
+    
+    # --- Model 2: Linear Regression ---
+    Lr_model_eng = LinearRegression()
+    Lr_model_eng.fit(X_train_eng, y_train_eng)
+    Lr_y_pred_eng = Lr_model_eng.predict(X_test_eng)
+    Lr_accuracy_eng = accuracy_score(y_test_eng, (Lr_y_pred_eng> 0.5).astype(int))
+    Lr_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, (Lr_y_pred_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
+    Lr_metrics_eng_df = Lr_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+    Lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+    
+    # --- Model 3: Random Forest ---
+    rf_model_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+    rf_model_eng.fit(X_train_eng, y_train_eng)
+    rf_y_pred_eng = rf_model_eng.predict(X_test_eng)
+    rf_accuracy_eng, rf_metrics_eng_df = get_metrics(y_test_eng, rf_y_pred_eng, "Random Forest (Engineered Features)")
+    
+    # --- Model 4: XGBoost ---
+    xgb_model_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
+        scale_pos_weight=(len(y_train_eng) - y_train_eng.sum()) / y_train_eng.sum()) # Handle class imbalance
+    xgb_model_eng.fit(X_train_eng, y_train_eng)
+    xgb_y_pred_eng = xgb_model_eng.predict(X_test_eng)
+    xgb_accuracy_eng, xgb_metrics_eng_df = get_metrics(y_test_eng, xgb_y_pred_eng, "XGBoost (Engineered Features)")
+    
+    # --- Model 5: KMeans --- 
+    kmeans_eng = KMeans(n_clusters=2, random_state=42)
+    kmeans_eng.fit(X_train_eng)
+    kmeans_labels_eng = kmeans_eng.predict(X_test_eng)
+    kmeans_accuracy_eng, kmeans_metrics_df_eng = get_metrics(y_test_eng, kmeans_labels_eng, "KMeans (Engineered Features)")
+    
+    # --- Model 6: SVM --- 
+    svm_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
+    svm_eng.fit(X_train_eng, y_train_eng)
+    svm_y_pred_eng = svm_eng.predict(X_test_eng)
+    svm_accuracy_eng, svm_metrics_df_eng = get_metrics(y_test_eng, svm_y_pred_eng, "SVM (Engineered Features)")
+    
+    # --- Model 7: Gradient Boosting --- 
+    gb_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
+    gb_eng.fit(X_train_eng, y_train_eng)
+    gb_y_pred_eng = gb_eng.predict(X_test_eng)
+    gb_accuracy_eng, gb_metrics_df_eng = get_metrics(y_test_eng, gb_y_pred_eng, "Gradient Boosting (Engineered Features)")
+    
+    # --- Model 8: Gaussian Mixture --- 
+    gmm_eng = GaussianMixture(n_components=2, random_state=42)
+    gmm_eng.fit(X_train_eng)
+    gmm_labels_eng = gmm_eng.predict(X_test_eng)
+    gmm_accuracy_eng, gmm_metrics_df_eng = get_metrics(y_test_eng, gmm_labels_eng, "Gaussian Mixture (Engineered Features)")
+    
+    # --- 3.3 Model Comparison DataFrames for All Models ---
+    def build_comparison_df(metrics_no_eng_df, metrics_eng_df, model_name):
+        comparison_data = []
+        metrics_no_eng_dict = metrics_no_eng_df.to_dict('index')
+        metrics_eng_dict = metrics_eng_df.to_dict('index')
+    
+        for class_name_key in metrics_no_eng_dict:
+            metrics = metrics_no_eng_dict[class_name_key]
+            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+        for class_name_key in metrics_eng_dict:
+            metrics = metrics_eng_dict[class_name_key]
+            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+        return pd.DataFrame(comparison_data)
+    
+    # Build comparison DataFrames for each model
+    lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
+    linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
+    rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
+    xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_eng_df, "XGBoost")
+    kmeans_comparison_df = build_comparison_df(kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, "KMeans")
+    svm_comparison_df = build_comparison_df(svm_metrics_df_no_eng, svm_metrics_df_eng, "SVM")
+    gb_comparison_df = build_comparison_df(gb_metrics_df_no_eng, gb_metrics_df_eng, "Gradient Boosting")
+    gmm_comparison_df = build_comparison_df(gmm_metrics_df_no_eng, gmm_metrics_df_eng, "Gaussian Mixture")
+    
+    # Combine all into one master comparison DataFrame
+    all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
+                                        kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
+    
+    print("All model comparison dataframe created.")
+    
+    # Create comparison_df for plotting RF performance with/without engineered features
+    comparison_data = []
+    
+    rf_metrics_no_eng_dict = rf_metrics_df_no_eng.to_dict('index')
+    rf_metrics_with_eng_dict = rf_metrics_eng_df.to_dict('index')
+    
+    for class_name_key in rf_metrics_no_eng_dict:
+        metrics = rf_metrics_no_eng_dict[class_name_key]
+        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+    for class_name_key in rf_metrics_with_eng_dict:
+        metrics = rf_metrics_with_eng_dict[class_name_key]
+        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+    comparison_df = pd.DataFrame(comparison_data)
+    
+    # --- 3.4 Model Accuracy Comparison DataFrames to find best model ---
+    # Create a DataFrame for the summary table
+    accuracy_summary_df = pd.DataFrame({
+        'Model': [
+            'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
+            'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
+            'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)', 'KMeans (No Features)', 'KMeans (Engineered Features)',
+            'SVM (No Features)', 'SVM (Engineered Features)', 'Gradient Boosting (No Features)', 'Gradient Boosting (Engineered Features)',
+            'Gaussian Mixture (No Features)', 'Gaussian Mixture (Engineered Features)'
+        ],
+        'Accuracy': [
+            lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng,
+            kmeans_accuracy_no_eng, kmeans_accuracy_eng, svm_accuracy_no_eng, svm_accuracy_eng, gb_accuracy_no_eng, gb_accuracy_eng, gmm_accuracy_no_eng, gmm_accuracy_eng
+        ]
+    })
+    if "accuracy_summary_df_original" not in st.session_state:
+        if not is_any_filter_different:
+            st.session_state["accuracy_summary_df_original"] = accuracy_summary_df
 
+    print("Model comparison dataframes created.")
+except Exception as e:   
+    print(f"Error during model training and comparison: {e}")
+    st.warning("Not enough data for models to perform testing. Please adjust your filters to include more data.")
+    
 # --- 4. Time Series Data (`unique_artists_per_day`) (from Section II, needed for dashboard) ---
 unique_artists_per_day = filtered_df.groupby('date')['artist'].nunique()
 print("Unique artists per day calculated for Time Series Analysis.")
@@ -1717,7 +1724,6 @@ def build_genre_mapping(unique_urls, existing_mapping):
             progress_bar.progress((i + 1) / total)
             progress_text_info.info("⏳ Wait for about 2–3 minutes while we prepare your recommendational analysis tab.")
 
-
     # Clear progress bar and text after completion
     progress_bar.empty()
     progress_text_success.empty()
@@ -1766,6 +1772,7 @@ print("✅ Genre-specific statistics calculated.")
 print("--- All required dataframes and variables are now prepared. ---")
 
 with tab2:
+    st.balloons()
     # --- Dashboard Title and Introduction ---
     st.title("Recommendational Analysis Dashboard For UK Music Market Listeners")
     st.markdown("""
@@ -1815,10 +1822,8 @@ with tab2:
             "🔥 Gradient Boosting": (gb_metrics_df_no_eng, gb_metrics_df_eng, gb_comparison_df),
             "🎭 Gaussian Mixture": (gmm_metrics_df_no_eng, gmm_metrics_df_eng, gmm_comparison_df)
         }
-    
         # Get the correct DataFrames
         metrics_no_eng, metrics_eng, comparison_df_model = model_metrics[model_choice]
-    
         # --- Display Classification Report (Heatmaps + Tables) ---
         colA, colB = st.columns(2)
         st.write(f"**{model_choice} Model Performance Comparison:**")
@@ -2310,7 +2315,9 @@ with tab2:
         if 'accuracy_summary_df' in locals():
             if is_any_filter_different:
                 # Compare baseline vs filtered model accuracies
-                overall_best_row = accuracy_summary_df.loc[accuracy_summary_df['Accuracy'].idxmax()]
+                overall_best_row = st.session_state["accuracy_summary_df_original"].loc[
+                    st.session_state["accuracy_summary_df_original"]['Accuracy'].idxmax()
+                ]
                 st.success(f"🏆 Overall Best Model: **{overall_best_row['Model']}** with Accuracy = {overall_best_row['Accuracy']:.4f}")
                 st.info(f"Filtered Best Model: **{best_model_name}** with Accuracy = {best_model_accuracy:.4f}")
                 if overall_best_row['Model'] == best_model_name:
@@ -2374,7 +2381,7 @@ with tab2:
         
         if len(filtered_df) == 0:
             with st.container():
-                st.warning("Please reload the website and wait for the OpenAI Model to predict and calculate Genre Specific Statistics for the entire date-range filter option. Then select any required date-range to see the conclusion.")
+                st.warning("Please reload the website and wait for the OpenAI Model to predict and calculate Genre Specific Statistics for the baseline metrics. Then select any required custom filter option to see the conclusion.")
         else:
             with st.container():
                 st.markdown("#### 🎵 Genre Insights")
@@ -2437,7 +2444,7 @@ with tab2:
             st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
             st.success("✅ The dashboard is useful for Atlantic Recording Corporation to identify UK listener preference indicators, collaboration strengths, and content composition trends in real time.")
             
-        st.markdown("---")
+        st.divider()
         st.markdown(
             """
             <div style='text-align: center; color: grey; font-size: 14px;'>
@@ -2449,7 +2456,7 @@ with tab2:
                 <br>From artistry’s spark to audience’s embrace,  
                 <br>we harmonize trends in a balanced space.  
                 <br>So let the metrics sing, let the visuals rhyme,  
-                <br>guiding the industry in tempo and time. 🎶<br>
+                <br>guiding the industry in tempo and time. 🎶<br><hr>
                 🔖 Dashboard created by <b>Prathamesh Bhurke</b><br>
                 <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./" target="_blank">
                     📂 GitHub Repository
