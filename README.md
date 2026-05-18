@@ -132,7 +132,7 @@ By shifting focus away from popularity trends (US project) toward **artist diver
 Dataset available via **Unified Mentor Project Portal**.
 
 ## Demo Preview
-[Watch the demo here](https://drive.google.com/file/d/1NiAR5kkCsyYcNCbgvQH_U2GIxs0WUyT7/view?usp=sharing)
+[Watch the demonstration video here](https://drive.google.com/file/d/1NiAR5kkCsyYcNCbgvQH_U2GIxs0WUyT7/view?usp=sharing)
 
 ## 📂 Access Dashboard
-[text](https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/)
+[United Kingdom Music Market Dashboard](https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/)
