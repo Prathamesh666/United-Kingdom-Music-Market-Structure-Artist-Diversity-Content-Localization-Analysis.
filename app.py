@@ -1636,7 +1636,6 @@ try:
         if not is_any_filter_different:
             st.session_state["accuracy_summary_df_original"] = accuracy_summary_df
 
-    print("Model comparison dataframes created.")
 except Exception as e:   
     print(f"Error during model training and comparison: {e}")
     st.warning("Not enough data for models to perform testing. Please adjust your filters to include more data.")
