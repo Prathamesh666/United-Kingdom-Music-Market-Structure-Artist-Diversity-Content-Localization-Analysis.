@@ -1660,7 +1660,10 @@ from huggingface_hub import login
 # Try Streamlit secrets first
 hf_token = st.secrets.get("HF_TOKEN")
 if hf_token:
-    login(token=hf_token)
+    try:
+        login(token=hf_token)
+    except Exception as e:
+        st.warning(f"⚠️ Hugging Face token found but login failed: {e}")
 else:
     st.warning("⚠️ Hugging Face token not found. Please set HF_TOKEN in secrets.toml or .env")
 
