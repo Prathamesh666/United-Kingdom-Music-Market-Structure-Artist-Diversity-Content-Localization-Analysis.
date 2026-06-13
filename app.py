@@ -291,7 +291,8 @@ with tab1:
     ])
     with tabs[0]:
         st.write("### Filtered Dataset Preview")
-        st.write(df_merged.head())
+        st.dataframe(df_merged.head())
+        
         st.markdown('---')
     with tabs[1]:
         st.subheader('Artist Dominance Leaderboard')
@@ -330,49 +331,96 @@ with tab1:
                         unique_collaborations[artists_in_collaboration] = set()
                     unique_collaborations[artists_in_collaboration].add(group['song'].iloc[0])
     
-                # Build graph from unique collaborations
+                # Build graph
                 G = nx.Graph()
                 for artist_group, songs in unique_collaborations.items():
-                    # Add nodes
                     G.add_nodes_from(artist_group)
-                    # Add edges between all pairs in this group
                     for artist1, artist2 in itertools.combinations(artist_group, 2):
                         if G.has_edge(artist1, artist2):
                             G[artist1][artist2]['weight'] += 1
                         else:
                             G.add_edge(artist1, artist2, weight=1)
     
-                # Visualization
-                fig, ax = plt.subplots(figsize=(15, 10))
-                pos = nx.spring_layout(G, k=0.15, iterations=50)
+                # Layout positions
+                pos = nx.spring_layout(G, k=0.15, iterations=50, seed=40)
     
-                nx.draw_networkx_nodes(G, pos, node_size=1000, node_color='skyblue', alpha=0.9, ax=ax)
+                # Edge traces (one per edge so width can vary)
+                edge_traces = []
+                max_weight = max([d['weight'] for _, _, d in G.edges(data=True)]) if G.number_of_edges() > 0 else 1
     
-                if G.number_of_edges() > 0:
-                    edge_list = list(G.edges())
-                    weights = [d['weight'] for _, _, d in G.edges(data=True)]
-                    max_weight = max(weights) if weights else 1
-                    nx.draw_networkx_edges(G, pos, edgelist=edge_list, width=[w / max_weight * 5 for w in weights], alpha=0.7, edge_color='gray', ax=ax)
-                else:
-                    st.warning("No collaboration edges to display for the current filter.")
+                for edge in G.edges(data=True):
+                    x0, y0 = pos[edge[0]]
+                    x1, y1 = pos[edge[1]]
+                    w = edge[2]['weight']
+                    edge_trace = go.Scatter(
+                        x=[x0, x1],
+                        y=[y0, y1],
+                        line=dict(width=(w/max_weight)*5, color='gray'),
+                        mode='lines',
+                        hoverinfo='text',
+                        text=f"{edge[0]} ↔ {edge[1]} ({w} collaborations)"
+                    )
+                    edge_traces.append(edge_trace)
     
-                nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold', ax=ax)
+                # Node data
+                node_x, node_y, node_text = [], [], []
+                for node in G.nodes():
+                    x, y = pos[node]
+                    node_x.append(x)
+                    node_y.append(y)
+                    node_text.append(node)
     
-                ax.set_title('Artist Collaboration Network', size=20)
-                ax.axis('off')
-                st.pyplot(fig)
+                node_trace = go.Scatter(
+                    x=node_x, y=node_y,
+                    mode='markers+text',
+                    text=node_text,
+                    textposition="top center",
+                    hoverinfo='text',
+                    marker=dict(
+                        size=20,
+                        color='skyblue',
+                        line=dict(width=2, color='darkblue')
+                    )
+                )
+    
+                # Plotly figure
+                fig = go.Figure(data=edge_traces + [node_trace],
+                                layout=go.Layout(
+                                    title=dict(
+                                        text='Artist Collaboration Network',
+                                        font=dict(size=20), x=0.5, y=0.95, xanchor='center', yanchor='top'),
+                                    showlegend=False,
+                                    hovermode='closest',
+                                    margin=dict(b=20, l=5, r=5, t=40),
+                                    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+                                ))                    
+    
+                st.plotly_chart(fig, width='stretch')
     
                 with st.expander("ℹ️ More Information"):
-                    for artist_group, songs in unique_collaborations.items():
-                        st.write(f"**{' , '.join(artist_group)}** collaborated on: {', '.join(sorted(songs))}")
-                    st.info('This network graph visualizes unique artist collaborations. Nodes represent artists, edges represent collaborations, and edge thickness indicates frequency across unique collaborations.')
-    
+                    st.info(f"Total unique collaborations found: **{len(unique_collaborations)}**")
+                    collab_list = sorted(unique_collaborations.items(), key=lambda x: ', '.join(x[0]))
+                    for idx, (artist_group, songs) in enumerate(collab_list, start=1):
+                        # Style artists in green
+                        artists_html = ', '.join([f"<span style='color:green'>{artist}</span>" for artist in sorted(artist_group)])
+                        # Style songs in gold
+                        songs_html = ', '.join([f"<span style='color:gold'>{song}</span>" for song in sorted(songs)])
+                        
+                        # Display with Streamlit markdown
+                        st.markdown(
+                            f"{idx}. <b>{artists_html} <span style='color:red'>collaborated on</span>: {songs_html}</b>",
+                            unsafe_allow_html=True
+                        )
+                    
+                    st.info("This interactive Plotly graph visualizes unique artist collaborations. Nodes represent artists, edges represent collaborations, and edge thickness indicates frequency across unique collaborations.")
+            
                 # --- 3D Interactive Visualization ---
                 st.markdown('---')
                 st.subheader("Interactive 3D Collaboration Network")
                 
                 # Use the same collaboration_counts_filtered for 3D
-                pos_3d = nx.spring_layout(G, dim=3, k=0.15, iterations=50, seed=42)
+                pos_3d = nx.spring_layout(G, dim=3, k=0.15, iterations=50, seed=40)
                 
                 node_x, node_y, node_z, node_text, node_size = [], [], [], [], []
                 for node in G.nodes():
@@ -476,17 +524,22 @@ with tab1:
                 st.info(f"- Explicit Tracks: {explicitness_counts_filtered.get(True, 0)} ({explicitness_percentage_filtered.get(True, 0):.2f}%) ")
                 st.info(f"- Non-Explicit Tracks: {explicitness_counts_filtered.get(False, 0)} ({explicitness_percentage_filtered.get(False, 0):.2f}%) ")
         
-        # Prepare data for pie chart
-        pie_data_filtered = explicitness_counts_filtered
-        pie_labels_filtered = ['Non-Explicit' if label == False else 'Explicit' for label in pie_data_filtered.index]
-        # Create the pie chart
-        fig_pie, ax_pie = plt.subplots(figsize=(9, 8))
-        ax_pie.pie(pie_data_filtered, labels=pie_labels_filtered, autopct='%1.1f%%', startangle=90, colors=sns.color_palette('pastel'))
-        ax_pie.set_title('Overall Distribution of Explicit vs. Non-Explicit Content (Filtered)')
-        ax_pie.axis('equal') # Equal aspect ratio ensures that pie is drawn as a circle.
-        
+        # Pie chart using Plotly
+        pie_data = pd.DataFrame({
+            "Content Type": ['Explicit', 'Non-Explicit'],
+            "Count": [explicitness_counts_filtered.get(True, 0), explicitness_counts_filtered.get(False, 0)]
+        })
+        fig_pie = px.pie(
+            pie_data,
+            names="Content Type",
+            values="Count",
+            color="Content Type",
+            color_discrete_map={"Explicit": "orange", "Non-Explicit": "skyblue"},
+            title="Overall Distribution of Explicit vs. Non-Explicit Content (Filtered)"
+        )
+        fig_pie.update_layout(title=dict( text="Overall Distribution of Explicit vs. Non-Explicit Content (Filtered)", x=0.5, xanchor="center",  y=0.95, yanchor="top"))
         with colA:
-            st.pyplot(fig_pie)
+            st.plotly_chart(fig_pie,width='stretch')
             with st.expander("ℹ️ More Information"):
                 st.info('This pie chart shows the overall proportion of explicit and non-explicit tracks in the dataset based on the current filters.')
         
@@ -503,15 +556,23 @@ with tab1:
         
         # Create the bar chart for explicit content percentage by rank group
         if not explicit_percentage_by_rank_filtered.empty:
-            fig_bar, ax_bar = plt.subplots(figsize=(9, 8))
-            sns.barplot(x=explicit_percentage_by_rank_filtered.index, y=explicit_percentage_by_rank_filtered.values, hue=explicit_percentage_by_rank_filtered.index, palette='viridis', legend=False, ax=ax_bar)
-            ax_bar.set_title('Percentage of Explicit Content by Rank Group (Filtered)')
-            ax_bar.set_xlabel('Rank Group')
-            ax_bar.set_ylabel('Percentage of Explicit Tracks (%)')
-            ax_bar.set_ylim(0, 100) # Ensure y-axis goes from 0 to 100
-            plt.tight_layout()
+            bar_data = explicit_percentage_by_rank_filtered.reset_index()
+            bar_data.columns = ["Rank Group", "Explicit %"]
+            fig_bar = px.bar(
+                bar_data,
+                x="Rank Group",
+                y="Explicit %",
+                color="Rank Group",
+                text="Explicit %",
+                color_discrete_sequence=px.colors.sequential.Viridis_r,
+                title="Percentage of Explicit Content by Rank Group (Filtered)"
+            )
+            fig_bar.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+            fig_bar.update_yaxes(range=[0, 100], title="Percentage of Explicit Tracks (%)")
+            fig_bar.update_layout(title=dict( text="Percentage of Explicit Content by Rank Group (Filtered)", x=0.5, xanchor="center",  y=0.95, yanchor="top"))
+            
             with colB:
-                st.pyplot(fig_bar)
+                st.plotly_chart(fig_bar, width='stretch')
                 with st.expander("ℹ️ More Information"):
                     st.info('This bar chart compares the percentage of explicit tracks within different rank groups (Top 10 vs. Top 11-50) based on the current filters.')
         else:
@@ -578,23 +639,26 @@ with tab1:
             
         # Create the horizontal bar chart for album type distribution
         if not album_type_counts_filtered.empty:
-            fig_album_type, ax_album_type = plt.subplots(figsize=(12, 11), constrained_layout=True)
+            bar_data = album_type_counts_filtered.reset_index()
+            bar_data.columns = ["Album Type", "Count"]
     
-            sns.barplot(
-                y=album_type_counts_filtered.index,   # categories on Y-axis
-                x=album_type_counts_filtered.values,  # counts on X-axis
-                hue=album_type_counts_filtered.index, legend=False,
-                palette='viridis',
-                ax=ax_album_type
+            fig_album_type = px.bar(
+                bar_data,
+                x="Count",
+                y="Album Type",
+                orientation="h",
+                color="Album Type",
+                color_discrete_sequence=px.colors.sequential.Viridis_r,
+                title="Release Format Dominance in the UK Market: Distribution of Album Types (Filtered)"
             )
-            ax_album_type.set_title('Release Format Dominance in the UK Market: Distribution of Album Types (Filtered)')
-            ax_album_type.set_xlabel('Number of Tracks')
-            ax_album_type.set_ylabel('Album Type')
-    
-            # Render and close cleanly
+            fig_album_type.update_layout(
+                title=dict(text="Release Format Dominance in the UK Market: Distribution of Album Types (Filtered)", x=0.5, xanchor="center", y=0.95, yanchor="top", font=dict(size=12, family="Black")),
+                xaxis_title="Number of Tracks",
+                yaxis_title="Album Type", legend=dict(font=dict(size=12, family="Black"))
+            )
+            fig_pie.update_traces(textfont=dict(size=12, family="Black"))
             with colA:
-                st.pyplot(fig_album_type)
-            plt.close(fig_album_type)
+                st.plotly_chart(fig_album_type, width='stretch')
         else:
             st.warning("No album type data available for the selected filters to display the chart.")
         
@@ -602,26 +666,29 @@ with tab1:
             with st.expander("**Percentage of each album type (Filtered Data):**"):
                 st.write(album_type_percentage_filtered)
             
-        # Create the bar chart for album type distribution (percentage form)
+        # Create the Donut chart for album type distribution (percentage form)
         if not album_type_counts_filtered.empty:
-            # Convert counts to percentages
             album_type_percent = album_type_counts_filtered / album_type_counts_filtered.sum() * 100
-        
-            # Use constrained_layout=True to avoid tight_layout warnings
-            fig, ax = plt.subplots(figsize=(5,5), constrained_layout=True)
-            
-            wedges, texts, autotexts = ax.pie( # type: ignore
-                album_type_percent,
-                labels=album_type_percent.index,
-                autopct='%1.1f%%',
-                startangle=90,
-                colors=sns.color_palette('pastel'),
-                wedgeprops=dict(width=0.4)  # creates donut effect
+            pie_data = album_type_percent.reset_index()
+            pie_data.columns = ["Album Type", "Percentage"]
+    
+            fig_pie = px.pie(
+                pie_data,
+                names="Album Type",
+                values="Percentage",
+                hole=0.4,  # donut effect
+                color="Album Type",
+                color_discrete_sequence=px.colors.qualitative.Pastel,
+                title="Album Type Distribution (Filtered)"
             )
-            ax.set_title('Album Type Distribution (Filtered)')
+            
+            # Make all text bold
+            fig_pie.update_layout(
+                title=dict( text="Album Type Distribution (Filtered)", x=0.5, xanchor="center", y=0.95, yanchor="top", font=dict(size=14, family="Arial Black")  # Bold title
+                ), legend=dict(font=dict(size=12, family="Black")))
+            fig_pie.update_traces(textfont=dict(size=12, family="Black"))
             with colB:
-                st.pyplot(fig)
-            plt.close(fig)
+                st.plotly_chart(fig_pie, width='stretch')
         else:
             st.warning("No album type data available for the selected filters to display the chart.")
         
@@ -631,18 +698,16 @@ with tab1:
         st.markdown('---')
     with tabs[5]:
         st.subheader('Track Duration Insights')
-        
-        # Calculate duration_min and duration_category for the filtered_df
+    
+        # Calculate duration_min and duration_category
         filtered_df['duration_min'] = filtered_df['duration_ms'] / 60000
         filtered_df['duration_category'] = filtered_df['duration_min'].apply(lambda x: 'short-form' if x < 3.5 else 'long-form')
-        
-        # Calculate total count of tracks for each duration category in filtered data
+    
+        # Counts and percentages
         duration_counts_filtered = filtered_df['duration_category'].value_counts()
-        
-        # Calculate percentage of tracks for each duration category in filtered data
         total_tracks_duration_filtered = duration_counts_filtered.sum()
         duration_percentage_filtered = (duration_counts_filtered / total_tracks_duration_filtered) * 100
-        
+    
         colA, colB = st.columns(2)
         with colA:
             with st.expander("**Duration Category Counts (Filtered Data):**"):
@@ -650,121 +715,138 @@ with tab1:
         with colB:
             with st.expander("**Duration Category Percentages (Filtered Data):**"):
                 st.dataframe(duration_percentage_filtered)
-        
-        # Prepare data for pie chart
-        pie_data_duration = duration_counts_filtered
-        # Ensure labels are a plain sequence of strings (matplotlib expects a Sequence[str], not a pandas Index)
-        pie_labels_duration = [str(label) for label in pie_data_duration.index]
-        
-        with colA:
-            if not filtered_df.empty:
-                fig_countplot, ax_countplot = plt.subplots(figsize=(6, 6), constrained_layout=True)
-                sns.countplot(
-                    data=filtered_df,
-                    x='duration_category', hue='duration_category', legend=False,
-                    palette='pastel',
-                    ax=ax_countplot
-                )
-                ax_countplot.set_title('Count Plot of Duration Categories (Filtered)')
-                ax_countplot.set_xlabel('Duration Category')
-                ax_countplot.set_ylabel('Number of Tracks')
-                st.pyplot(fig_countplot)
-                plt.close(fig_countplot)
     
+        # Count plot (bar chart)
+        if not filtered_df.empty:
+            fig_countplot = px.bar(
+                filtered_df,
+                x="duration_category",
+                color="duration_category",
+                color_discrete_sequence=px.colors.qualitative.G10,
+                title="Count Plot of Duration Categories (Filtered)"
+            )
+            fig_countplot.update_layout(
+                xaxis_title="Duration Category",
+                yaxis_title="Number of Tracks",
+                title=dict(x=0.5, xanchor="center", font=dict(size=16))
+            )
+            with colA:
+                st.plotly_chart(fig_countplot, width='stretch')
                 with st.expander("ℹ️ More Information"):
                     st.info("This count plot shows the absolute number of short-form and long-form tracks in the filtered dataset.")
-            else:
-                st.warning("No data available to display count plot.")
-        
-        with colB:
-            # Create the pie chart
-            if not pie_data_duration.empty:
-                # Use constrained_layout=True to avoid tight_layout warnings
-                fig_duration_pie, ax_duration_pie = plt.subplots(figsize=(8, 8), constrained_layout=True)
-                ax_duration_pie.pie( pie_data_duration, labels=pie_labels_duration, autopct='%1.1f%%', startangle=90, 
-                                    colors=sns.color_palette('pastel')
-                )
-                ax_duration_pie.set_title('Overall Distribution of Track Duration Categories (Filtered)')
-                ax_duration_pie.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-            
-                st.pyplot(fig_duration_pie)
-                plt.close(fig_duration_pie)
-            
-                with st.expander("ℹ️ More Information"):
-                    st.info('This pie chart shows the overall proportion of short-form and long-form tracks in the filtered dataset.')
-            else:
-                st.warning("No track duration data available for the selected filters to display the pie chart.")
-        
-        # Create 'popularity buckets' for the filtered_df
-        if not filtered_df.empty and 'popularity' in filtered_df.columns:
-            filtered_df['popularity_bucket'] = pd.qcut( filtered_df['popularity'], q=4, 
-                                                        labels=['Q1 (Least Popular)', 'Q2', 'Q3', 'Q4 (Most Popular)'], duplicates='drop'
+        else:
+            st.warning("No data available to display count plot.")
+    
+        # Pie chart
+        if not duration_counts_filtered.empty:
+            pie_data = duration_counts_filtered.reset_index()
+            pie_data.columns = ["Duration Category", "Count"]
+    
+            fig_duration_pie = px.pie(
+                pie_data,
+                names="Duration Category",
+                values="Count",
+                color="Duration Category",
+                color_discrete_sequence=px.colors.qualitative.Pastel,
+                title="Overall Distribution of Track Duration Categories (Filtered)"
             )
-            
-            # Group by popularity_bucket and duration_category, and count tracks
+            fig_duration_pie.update_layout(
+                title=dict(x=0.5, xanchor="center", font=dict(size=16))
+            )
+            with colB:
+                st.plotly_chart(fig_duration_pie, width='stretch')
+                with st.expander("ℹ️ More Information"):
+                    st.info("This pie chart shows the overall proportion of short-form and long-form tracks in the filtered dataset.")
+        else:
+            st.warning("No track duration data available for the selected filters to display the pie chart.")
+    
+        # Popularity buckets
+        if not filtered_df.empty and 'popularity' in filtered_df.columns:
+            filtered_df['popularity_bucket'] = pd.qcut(
+                filtered_df['popularity'], q=4,
+                labels=['Q1 (Least Popular)', 'Q2', 'Q3', 'Q4 (Most Popular)'],
+                duplicates='drop'
+            )
+    
             duration_popularity_distribution_filtered = (
                 filtered_df.groupby(['popularity_bucket', 'duration_category'], observed=False)
                 .size()
                 .unstack(fill_value=0)
             )
-        
+    
             with st.expander("**Distribution of Track Duration Categories by Popularity Bucket (Filtered Data):**"):
                 st.dataframe(duration_popularity_distribution_filtered)
-        
-            # Plotting the distribution
+    
             if not duration_popularity_distribution_filtered.empty:
-                fig_pop_duration, ax_pop_duration = plt.subplots(figsize=(12, 7), constrained_layout=True)
-                duration_popularity_distribution_filtered.plot(
-                    kind='bar', stacked=True, ax=ax_pop_duration, colormap='viridis'
+                bar_data = duration_popularity_distribution_filtered.reset_index().melt(
+                    id_vars="popularity_bucket", var_name="Duration Category", value_name="Count"
                 )
-                ax_pop_duration.set_title('Track Duration Distribution Across Popularity Buckets (Filtered)')
-                ax_pop_duration.set_xlabel('Popularity Bucket')
-                ax_pop_duration.set_ylabel('Number of Tracks')
-                plt.xticks(rotation=45, ha='right')
-        
-                st.pyplot(fig_pop_duration)
-                plt.close(fig_pop_duration)
-        
+                fig_pop_duration = px.bar(
+                    bar_data,
+                    x="popularity_bucket",
+                    y="Count",
+                    color="Duration Category",
+                    barmode="stack",
+                    color_discrete_sequence=px.colors.sequential.Aggrnyl_r,
+                    title="Track Duration Distribution Across Popularity Buckets (Filtered)"
+                )
+                fig_pop_duration.update_layout(
+                    xaxis_title="Popularity Bucket",
+                    yaxis_title="Number of Tracks",
+                    title=dict(x=0.5, xanchor="center", font=dict(size=16))
+                )
+                st.plotly_chart(fig_pop_duration, width='stretch')
+    
                 with st.expander("ℹ️ More Information"):
-                    st.info('This stacked bar chart illustrates how short-form and long-form tracks are distributed across different popularity levels (quartiles).')
+                    st.info("This stacked bar chart illustrates how short-form and long-form tracks are distributed across different popularity levels (quartiles).")
             else:
                 st.warning("No data available to visualize track duration distribution across popularity buckets for the selected filters.")
         else:
             st.warning("Cannot analyze track duration across popularity buckets. Ensure 'popularity' column is available and data is not empty.")
-        
-        # --- Create 'popularity buckets' and duration ranges ---
+    
+        # Duration ranges + box plot
         if not filtered_df.empty and 'popularity' in filtered_df.columns and 'duration_min' in filtered_df.columns:
-            try:
-                filtered_df['popularity_bucket'] = pd.qcut(filtered_df['popularity'], q=4, labels=['Q1 (Least Popular)', 'Q2', 'Q3', 'Q4 (Most Popular)'], duplicates='drop')
-            except ValueError:
-                filtered_df['popularity_bucket'] = pd.qcut(filtered_df['popularity'], q=4, labels=['Q1', 'Q2', 'Q3', 'Q4'], duplicates='drop')
-            
-            # Define duration bins (in minutes) and labels, using the updated bins from cell ac888dd6
             duration_bins = [0, 2, 4, 6, 8, 10]
             duration_bin_labels = ['0-2 min', '2-4 min', '4-6 min', '6-8 min', '8-10 min']
-            filtered_df['duration_range'] = pd.cut(filtered_df['duration_min'], bins=duration_bins, labels=duration_bin_labels, right=False, include_lowest=True)
-            df_merged['duration_range'] = pd.cut(df_merged['duration_min'], bins=duration_bins, labels=duration_bin_labels, right=False, include_lowest=True)   
-            duration_range_popularity_distribution = filtered_df.groupby(['popularity_bucket', 'duration_range'], observed=False).size().unstack(fill_value=0)
-            
-            # --- Display Table: Distribution of Track Duration Ranges by Popularity Bucket ---
+            filtered_df['duration_range'] = pd.cut(
+                filtered_df['duration_min'], bins=duration_bins,
+                labels=duration_bin_labels, right=False, include_lowest=True
+            )
+            df_merged['duration_range'] = pd.cut(
+                df_merged['duration_min'], bins=duration_bins,
+                labels=duration_bin_labels, right=False, include_lowest=True
+            )
+    
+            duration_range_popularity_distribution = (
+                filtered_df.groupby(['popularity_bucket', 'duration_range'], observed=False)
+                .size()
+                .unstack(fill_value=0)
+            )
+    
             with st.expander("**Distribution of Track Duration Ranges by Popularity Bucket:**"):
                 st.dataframe(duration_range_popularity_distribution)
-            
-            # --- Display Box Plot: Track Duration Distribution by Popularity Bucket ---
-            fig_boxplot, ax_boxplot = plt.subplots(figsize=(12, 7))
-            sns.boxplot(x='popularity_bucket', y='duration_min', data=filtered_df, palette='viridis', hue='popularity_bucket', legend=False, ax=ax_boxplot)
-            ax_boxplot.set_title('Track Duration Distribution by Popularity Bucket (Box Plot)')
-            ax_boxplot.set_xlabel('Popularity Bucket')
-            ax_boxplot.set_ylabel('Duration (Minutes)')
-            plt.xticks(rotation=45, ha='right')
-            plt.tight_layout()
-            st.pyplot(fig_boxplot)
-            
+    
+            fig_boxplot = px.box(
+                filtered_df,
+                x="popularity_bucket",
+                y="duration_min",
+                color="popularity_bucket",
+                color_discrete_sequence=px.colors.sequential.Agsunset_r,
+                category_orders={"popularity_bucket": ["Q1 (Least Popular)", "Q2", "Q3", "Q4 (Most Popular)"]},  
+                title="Track Duration Distribution by Popularity Bucket (Box Plot)"
+            )
+            fig_boxplot.update_layout(
+                xaxis_title="Popularity Bucket",
+                yaxis_title="Duration (Minutes)",
+                title=dict(x=0.5, xanchor="center", font=dict(size=16))
+            )
+            st.plotly_chart(fig_boxplot, width='stretch')
+    
             with st.expander("ℹ️ More Information"):
-                st.info('This box plot visualizes the median, quartiles, and outliers of track duration for each popularity bucket. It helps to visualize the typical range and spread of track lengths within each popularity quartile.') 
+                st.info("This box plot visualizes the median, quartiles, and outliers of track duration for each popularity bucket. It helps to visualize the typical range and spread of track lengths within each popularity quartile.")
         else:
             st.warning("Cannot analyze track duration across popularity buckets. Ensure 'popularity' and 'duration_min' columns are available and data is not empty.")
-        
+    
         st.write("### **🎧 Insights into UK Listener Preference Indicators**")
         
         overall_short_form_pct = duration_percentage.get('short-form', 0.0)
@@ -973,6 +1055,9 @@ with tab1:
         # --- CSS for metric styling with hover + bouncing animation ---
         st.markdown("""
             <style>
+            .stAlert {
+                text-align: center;
+            }
             /* Base metric card */
             div[data-testid="stMetric"] {
                 background-color: rgba(255,255,255,0.05);
@@ -1600,8 +1685,6 @@ try:
     all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
                                         kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
     
-    print("All model comparison dataframe created.")
-    
     # Create comparison_df for plotting RF performance with/without engineered features
     comparison_data = []
     
@@ -1659,6 +1742,7 @@ print("Unique artists per day calculated for Time Series Analysis.")
 from huggingface_hub import login
 # Try Streamlit secrets first
 hf_token = st.secrets.get("HF_TOKEN")
+
 if hf_token:
     try:
         login(token=hf_token)
@@ -1782,11 +1866,27 @@ is_any_filter_different = (
     is_date_range_different or is_artist_filter_different or is_track_type_different or is_album_type_different 
     or is_duration_filter_different or is_popularity_filter_different or is_genre_filter_different
 )
+    
+baseline_total = len(unique_album_covers)
+current_total = len(filtered_df['album_cover_url'].dropna().unique())
+delta = current_total - baseline_total
+
+if delta >= 0:
+    delta_str = f"⬆️ +{delta}"
+else:
+    delta_str = f"⬇️ {delta}"
+
+# --- Sidebar caption with arrows ---
+with st.sidebar:
+    if is_any_filter_different:
+        st.caption(f"🎵 Total Songs: {current_total} ({delta_str})")
+    else:
+        st.caption(f"🎵 Total Songs: {baseline_total}")
 
 # --- 5.1 Genre-Specific Analysis DataFrames (from Section XVI) ---
-genre_popularity_stats = filtered_df.groupby('genre')['popularity'].agg(['mean', 'median', 'std']).sort_values(by='mean', ascending=False)
+genre_popularity_stats = filtered_df.groupby('genre')['popularity'].agg(['mean', 'median', 'std']).sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
 genre_explicitness_percentage = filtered_df.groupby('genre')['is_explicit'].mean() * 100
-genre_duration_stats = filtered_df.groupby('genre')['duration_min'].agg(['mean', 'median', 'std']).sort_values(by='mean', ascending=False)
+genre_duration_stats = filtered_df.groupby('genre')['duration_min'].agg(['mean', 'median', 'std']).sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
 print("✅ Genre-specific statistics calculated.")
 
 print("--- All required dataframes and variables are now prepared. ---")
@@ -1816,6 +1916,7 @@ with tab2:
         """)
     
         # --- Model Selection Filter ---
+        warnings.filterwarnings("ignore", message="Glyph .* missing from font.*")
         model_choice = st.selectbox(
             "Select a Model to View Metrics",
             ["🧩 Logistic Regression", "📈 Linear Regression", "🌳 Random Forest 🌲", "🚀 XGBoost",
@@ -1824,7 +1925,7 @@ with tab2:
     
         # --- Helper function to plot heatmap ---
         def plot_heatmap(metrics_df, title):
-            fig, ax = plt.subplots(figsize=(6,4))
+            fig, ax = plt.subplots(figsize=(10,8))
             sns.heatmap(metrics_df.drop(columns=['support'], errors='ignore'), 
                         annot=True, cmap="viridis", fmt=".2f", ax=ax)
             ax.set_title(title)
@@ -1846,64 +1947,101 @@ with tab2:
         metrics_no_eng, metrics_eng, comparison_df_model = model_metrics[model_choice]
         # --- Display Classification Report (Heatmaps + Tables) ---
         colA, colB = st.columns(2)
-        st.write(f"**{model_choice} Model Performance Comparison:**")
+    
         with colA:
             with st.expander(f"{model_choice} Performance (Without Engineered Features):"):
-                plot_heatmap(metrics_no_eng, f"{model_choice} (No Features)")
-                st.dataframe(metrics_no_eng.drop(columns=['support'], errors='ignore'))
+                # Interactive heatmap for metrics_no_eng
+                df_no_eng = metrics_no_eng.drop(columns=['support'], errors='ignore')
+                fig_no_eng = px.imshow(
+                    df_no_eng.values,
+                    x=df_no_eng.columns,
+                    y=df_no_eng.index,
+                    color_continuous_scale="Viridis",
+                    labels=dict(x="Metric", y="Class", color="Score"),
+                    title=f"{model_choice} (No Features)"
+                )
+                fig_no_eng.update_layout(
+                    margin=dict(t=80, b=40),
+                    title=dict(text=f"{model_choice} (No Features)", x=0.5, xanchor="center", y=0.95, yanchor="top")
+                )
+                st.plotly_chart(fig_no_eng, width='stretch')
+                st.dataframe(df_no_eng)
+        
         with colB:
             with st.expander(f"{model_choice} Performance (With Engineered Features):"):
-                plot_heatmap(metrics_eng, f"{model_choice} (Engineered Features)")
-                st.dataframe(metrics_eng.drop(columns=['support'], errors='ignore'))
+                # Interactive heatmap for metrics_eng
+                df_eng = metrics_eng.drop(columns=['support'], errors='ignore')
+                fig_eng = px.imshow(
+                    df_eng.values,
+                    x=df_eng.columns,
+                    y=df_eng.index,
+                    color_continuous_scale="Viridis",
+                    labels=dict(x="Metric", y="Class", color="Score"),
+                    title=f"{model_choice} (Engineered Features)"
+                )
+                fig_eng.update_layout(
+                    margin=dict(t=80, b=40),
+                    title=dict(text=f"{model_choice} (Engineered Features)", x=0.5, xanchor="center", y=0.95, yanchor="top")
+                )
+                st.plotly_chart(fig_eng, width='stretch')
+                st.dataframe(df_eng)
     
         # --- Display Comparison Plot (Chart) ---
         if comparison_df_model is not None:
-            g = sns.catplot(
-                x='Metric', y='Score', hue='Model', col='Class',
-                data=comparison_df_model, kind='bar', palette='viridis',
-                errorbar=None, col_wrap=2, height=6, aspect=1.2
+            fig_comp = px.bar(
+                comparison_df_model,
+                x="Metric", y="Score", color="Model",
+                facet_col="Class", facet_col_wrap=2,
+                barmode="group",
+                color_discrete_sequence=px.colors.sequential.Viridis_r
             )
-            g.fig.suptitle(f'{model_choice} Performance Comparison: With vs. Without Engineered Features', y=1.08, fontsize=18)
-            g.set_axis_labels('Metric', 'Score')
-            g.set_titles('Class: {col_name}')
-            # Force legend creation
-            g.add_legend()
-            # Reposition legend: center top, just below title
-            legend = g.fig.legends[0]   # first legend object in the figure
-            legend.set_bbox_to_anchor((0.5, 1.02))   # center horizontally, slightly above plots
-            legend.set_loc("upper center")  
-            plt.ylim(0, 1)
-            plt.tight_layout(rect=(0, 0, 1, 0.95))
-            st.pyplot(g.fig)
+            
+            fig_comp.update_layout(
+                title=f"{model_choice} Performance Comparison: With vs. Without Engineered Features",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.05,   # place legend just below title
+                    xanchor="center",
+                    x=0.5
+                ),
+                margin=dict(t=120, b=80, l=50, r=50),  # extra space for title + axis labels
+                title_pad=dict(t=60),
+                yaxis=dict(range=[0, 1], title="Score"),
+                xaxis=dict(title="Metric", title_standoff=20)
+            )
+            
+            # Custom facet titles for clarity
+            fig_comp.for_each_annotation(lambda a: a.update(
+                text="Class 0 (Not Top 10)" if "Class=0" in a.text else
+                    "Class 1 (Top 10)" if "Class=1" in a.text else a.text
+            ))
+        
+            st.plotly_chart(fig_comp, width='stretch')
         else:
             st.warning("Comparison DataFrame not found. Please ensure the model comparison section was run.")
-    
-        # --- Fixed Accuracy Comparison Table ---
+        
+        # --- Accuracy Comparison Table + Interactive Bar Chart ---
         if 'accuracy_summary_df' in locals():
-            # Summary table of model accuracies
             with st.expander("📊 **Model Accuracy Comparison (All Models):**"):
                 st.dataframe(accuracy_summary_df)
-        
-            # Add the bar chart for model accuracies
-            fig_accuracy_comp, ax_accuracy_comp = plt.subplots(figsize=(10, 6), constrained_layout=True)
-            sns.barplot(x='Model', y='Accuracy', data=accuracy_summary_df, palette='viridis', hue='Model', legend=False, ax=ax_accuracy_comp)
-            ax_accuracy_comp.set_title('Comparison of Model Accuracies')
-            ax_accuracy_comp.set_xlabel('Model')
-            ax_accuracy_comp.set_ylabel('Accuracy Score')
-            ax_accuracy_comp.set_ylim(0, 1)  # Accuracy scores range from 0 to 1
-            plt.xticks(rotation=45, ha='right')
-        
-            st.pyplot(fig_accuracy_comp)
-            plt.close(fig_accuracy_comp)
-            # Get the row with the highest accuracy
+    
+            fig_acc = px.bar(
+                accuracy_summary_df,
+                x="Model", y="Accuracy", color="Model",
+                text="Accuracy", color_discrete_sequence=px.colors.sequential.Viridis
+            )
+            fig_acc.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+            fig_acc.update_layout(title="Comparison of Model Accuracies", yaxis=dict(range=[0,1]))
+            st.plotly_chart(fig_acc, width='stretch')
+    
             best_model_row = accuracy_summary_df.loc[accuracy_summary_df['Accuracy'].idxmax()]
             best_model_name = best_model_row['Model']
             best_model_accuracy = best_model_row['Accuracy']
-        
             st.success(f"🏆 Best Model: **{best_model_name}** with Accuracy = {best_model_accuracy:.4f}")
         else:
             st.warning("`accuracy_summary_df` not found. Please ensure the model accuracy summary section was run.")
-    
+        
         # --- Your Plotly figure construction code ---
         metric_types_to_plot = ['F1-score', 'Precision', 'Recall']
         metric_color_map = {'F1-score': 'yellow', 'Precision': 'red', 'Recall': 'green'}
@@ -2013,69 +2151,93 @@ with tab2:
         st.plotly_chart(fig, width='stretch')
     
         st.markdown('---')
+        
     with tabs[1]:
         # --- Save baseline engineered feature distributions once ---
         if "baseline_day_of_week_counts" not in st.session_state:
-            st.session_state["baseline_day_of_week_counts"] = (df_merged.groupby('day_of_week')['chart_success'].value_counts())
-        
+            st.session_state["baseline_day_of_week_counts"] = (
+                df_merged.groupby('day_of_week')['chart_success'].value_counts()
+            )
         if "baseline_duration_x_num_artists" not in st.session_state:
             st.session_state["baseline_duration_x_num_artists"] = df_merged[['duration_x_num_artists','popularity','chart_success']]
-        
         if "baseline_explicit_duration" not in st.session_state:
             st.session_state["baseline_explicit_duration"] = df_merged[['explicit_duration','chart_success']]
-        
+    
         # --- Section 2: Feature Engineering Visualizations (Relevant to Chart Success) ---
         st.subheader("Feature Engineering Visualizations for Chart Success")
         st.markdown("""
         Visualizations of engineered features provide insights into their relationship with chart success.
         """)
-        
-        st.write("**Chart Success by Day of the Week:**")
-        fig_day_of_week, ax_day_of_week = plt.subplots(figsize=(10, 6), constrained_layout=True)
-        sns.countplot(x='day_of_week', hue='chart_success', data=df_merged, palette='viridis', ax=ax_day_of_week)
-        ax_day_of_week.set_title('Chart Success by Day of the Week')
-        ax_day_of_week.set_xlabel('Day of Week (0=Monday, 6=Sunday)')
-        ax_day_of_week.set_ylabel('Number of Tracks')
-        ax_day_of_week.legend(title='Chart Success (0=No, 1=Yes)')
-        ax_day_of_week.set_xticks(ticks=range(7), labels=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-        
-        st.pyplot(fig_day_of_week)
-        plt.close(fig_day_of_week)
-        
+    
+        # --- Chart Success by Day of the Week ---
+        fig_day_of_week = px.histogram(
+            df_merged,
+            x="day_of_week",
+            color="chart_success",
+            barmode="group",
+            color_discrete_sequence=px.colors.sequential.Agsunset_r,
+            labels={"day_of_week":"Day of Week (0=Mon, 6=Sun)", "chart_success":"Chart Success"}
+        )
+        fig_day_of_week.update_layout(
+            title="Chart Success by Day of the Week",
+            xaxis=dict(
+                tickmode="array",
+                tickvals=list(range(7)),
+                ticktext=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+            ),
+            yaxis_title="Number of Tracks",
+            legend_title="Chart Success (0=No, 1=Yes)"
+        )
+        st.plotly_chart(fig_day_of_week, width='stretch')
+    
         with st.expander("ℹ️ More Information"):
             st.info("- Chart success varies by day, with certain weekdays showing higher Top 10 entries, indicating optimal release timing in the UK market.")
             st.info("- Weekly patterns may reflect audience engagement cycles and promotional strategies in UK music consumption.")
-        
-        st.write("**Interaction of Duration and Number of Artists vs. Popularity:**")
-        fig_duration_x_artists, ax_duration_x_artists = plt.subplots(figsize=(12, 7), constrained_layout=True)
-        sns.scatterplot(x='duration_x_num_artists', y='popularity', hue='chart_success', data=df_merged, palette='coolwarm', alpha=0.6, ax=ax_duration_x_artists)
-        ax_duration_x_artists.set_title('Interaction of Duration and Number of Artists vs. Popularity by Chart Success')
-        ax_duration_x_artists.set_xlabel('Duration (min) * Number of Artists')
-        ax_duration_x_artists.set_ylabel('Popularity')
-        ax_duration_x_artists.legend(title='Chart Success (0=No, 1=Yes)')
-        
-        st.pyplot(fig_duration_x_artists)
-        plt.close(fig_duration_x_artists)
-        
+    
+        # --- Interaction of Duration and Number of Artists vs. Popularity ---
+        fig_duration_x_artists = px.scatter(
+            df_merged,
+            x="duration_x_num_artists",
+            y="popularity",
+            color="chart_success",
+            color_discrete_sequence=px.colors.diverging.RdBu,
+            opacity=0.6,
+            labels={"duration_x_num_artists":"Duration (min) * Number of Artists", "popularity":"Popularity", "chart_success":"Chart Success"}
+        )
+        fig_duration_x_artists.update_layout(
+            title="Interaction of Duration and Number of Artists vs. Popularity by Chart Success",
+            legend_title="Chart Success (0=No, 1=Yes)"
+        )
+        st.plotly_chart(fig_duration_x_artists, width='stretch')
+    
         with st.expander("ℹ️ More Information"):
             st.info("- Longer durations with more artists correlate with higher popularity, suggesting collaborative extended tracks appeal to UK listeners.")
             st.info("- Interaction effects highlight how production complexity influences chart performance in the UK market.")
-        
-        st.write("**Distribution of Explicit Track Duration by Chart Success:**")
-        fig_explicit_duration, ax_explicit_duration = plt.subplots(figsize=(8, 6), constrained_layout=True)
-        sns.violinplot(x='chart_success', y='explicit_duration', data=df_merged, palette='Set2', hue='chart_success', legend=False, ax=ax_explicit_duration)
-        ax_explicit_duration.set_title('Distribution of Explicit Track Duration by Chart Success')
-        ax_explicit_duration.set_xlabel('Chart Success (0=No, 1=Yes)')
-        ax_explicit_duration.set_ylabel('Explicit Duration (minutes)')
-        ax_explicit_duration.set_xticks(ticks=[0, 1], labels=['Not Top 10', 'Top 10'])
-        
-        st.pyplot(fig_explicit_duration)
-        plt.close(fig_explicit_duration)
-        
+    
+        # --- Distribution of Explicit Track Duration by Chart Success ---
+        fig_explicit_duration = px.violin(
+            df_merged,
+            x="chart_success",
+            y="explicit_duration",
+            color="chart_success",
+            box=True, points="all",
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            labels={"chart_success":"Chart Success", "explicit_duration":"Explicit Duration (minutes)"}
+        )
+        fig_explicit_duration.update_layout(
+            title="Distribution of Explicit Track Duration by Chart Success",
+            xaxis=dict(
+                tickmode="array",
+                tickvals=[0,1],
+                ticktext=['Not Top 10','Top 10']
+            )
+        )
+        st.plotly_chart(fig_explicit_duration, width='stretch')
+    
         with st.expander("ℹ️ More Information"):
             st.info("- Explicit tracks in Top 10 tend to be shorter, balancing maturity with concise delivery for UK audience preferences.")
             st.info("- Duration-explicitness interplay reveals content strategy nuances in achieving UK chart success.")
-        
+    
         st.markdown('---')
     with tabs[2]:
         # --- Recommendation 3: Time Series Analysis of Trends ---
@@ -2084,173 +2246,184 @@ with tab2:
         Analyzing trends over time can reveal seasonality, shifts in artist dominance, or changes in content preferences.
         Here's a look at the number of unique artists appearing in the Top 50 chart each day.
         """)
-        
+    
         if 'unique_artists_per_day' in locals():
             st.write("**Daily Unique Artists in Top 50:**")
-        
-            # Use constrained_layout=True to avoid tight_layout warnings
-            fig_unique_artists, ax_unique_artists = plt.subplots(figsize=(12, 6), constrained_layout=True)
+    
+            # Prepare dataframe
             unique_artists_per_day_df = unique_artists_per_day.reset_index()
-            # Assuming the date format is 'DD-MM-YYYY' based on previous processing of df['date']
-            unique_artists_per_day_df['date'] = pd.to_datetime(unique_artists_per_day_df['date'], dayfirst=True)
-            unique_artists_per_day_df = unique_artists_per_day_df.sort_values('date')  # Sort by date for correct line plot
-            sns.lineplot(x='date', y='artist', data=unique_artists_per_day_df, ax=ax_unique_artists)
-            ax_unique_artists.set_title('Number of Unique Artists in Top 50 Per Day')
-            ax_unique_artists.set_xlabel('Date')
-            ax_unique_artists.set_ylabel('Number of Unique Artists')
-            plt.xticks(rotation=45)
-            st.pyplot(fig_unique_artists)
-            plt.close(fig_unique_artists)
+            unique_artists_per_day_df['date'] = pd.to_datetime(
+                unique_artists_per_day_df['date'], dayfirst=True
+            )
+            unique_artists_per_day_df = unique_artists_per_day_df.sort_values('date')
+    
+            # Interactive Plotly line chart
+            fig_unique_artists = px.line(
+                unique_artists_per_day_df,
+                x="date",
+                y="artist",
+                markers=True,
+                labels={"date": "Date", "artist": "Number of Unique Artists"},
+                title="Number of Unique Artists in Top 50 Per Day"
+            )
+            fig_unique_artists.update_layout(
+                xaxis=dict(title="Date", tickangle=0),
+                yaxis=dict(title="Number of Unique Artists"),
+                hovermode="x unified", height=600
+            )
+    
+            st.plotly_chart(fig_unique_artists, width='stretch')
+    
         else:
             st.warning("`unique_artists_per_day` data not found. Please ensure the artist dominance analysis section was run.")
-        
+    
         with st.expander("ℹ️ More Information"):
             st.info("- Unique artist counts fluctuate over time, revealing periods of high diversity versus concentration in UK Top 50 charts.")
             st.info("- Temporal trends may indicate market saturation, new entries, or seasonal influences on UK music landscape.")
-        
+    
         st.markdown('---')
+        
     with tabs[3]:
         # --- Recommendation 4: Genre-Specific Analysis ---
         st.subheader("Genre-Specific Analysis (Conceptual)")
         st.markdown("""
-        While genre prediction is currently conceptual (using CLIPModel & CLIPProcessor from OpenAI) and sensitive in nature (for prediction of genre (based on album_cover_url column as a proxy for images)),
+        While genre prediction is currently conceptual (using CLIPModel & CLIPProcessor from OpenAI) and sensitive in nature,
         we can explore how different genres might relate to popularity, explicitness, and duration.
         """)
-        
+    
+        # --- Genre vs. Popularity ---
         if 'genre_popularity_stats' in locals() and not df_merged.empty:
             st.write("**Genre vs. Popularity:**")
-            fig_genre_pop, ax_genre_pop = plt.subplots(figsize=(14, 7), constrained_layout=True)
-            sns.boxplot(
-                x='genre', y='popularity', data=df_merged,
-                palette='coolwarm', hue='genre', legend=False,
-                order=genre_popularity_stats.index, ax=ax_genre_pop
+            fig_genre_pop = px.box(
+                df_merged,
+                x="genre", y="popularity", color="genre",
+                category_orders={"genre": genre_popularity_stats.index.tolist()},
+                labels={"genre":"Genre","popularity":"Popularity Score"},
+                title="Popularity Distribution by Genre"
             )
-            ax_genre_pop.set_title('Popularity Distribution by Genre')
-            ax_genre_pop.set_xlabel('Genre')
-            ax_genre_pop.set_ylabel('Popularity Score')
-            plt.xticks(rotation=45, ha='right')
-            st.pyplot(fig_genre_pop)
-            plt.close(fig_genre_pop)
-        
+            fig_genre_pop.update_layout(xaxis=dict(tickangle=45))
+            st.plotly_chart(fig_genre_pop, width='stretch')
+    
             if not genre_popularity_stats.empty:
-                top_genre = genre_popularity_stats.index[0]
-                bottom_genre = genre_popularity_stats.index[-1]
-                top_pop = genre_popularity_stats['mean'].iloc[0]
-                bottom_pop = genre_popularity_stats['mean'].iloc[-1]
+                # Sort by mean popularity
+                sorted_stats = genre_popularity_stats.sort_values(by="median", ascending=False)
+            
+                # Top and bottom genres
+                top_genre = sorted_stats.index[0]
+                bottom_genre = sorted_stats.index[-1]
+                top_pop = sorted_stats["median"].iloc[0]
+                bottom_pop = sorted_stats["median"].iloc[-1]
+                
                 with st.expander("ℹ️ More Information"):
-                    st.info(f"- **{top_genre}** leads in **popularity** with an average of **{top_pop:.1f}**, while **{bottom_genre}** ranks lowest at **{bottom_pop:.1f}**, showing clear **genre-based listener appeal** differences in the current filtered UK market.")
+                    st.info(f"- **{top_genre}** leads in popularity (median {top_pop:.1f}), while **{bottom_genre}** ranks lowest (median {bottom_pop:.1f}).")
                     st.info("- Popularity variations by genre may stem from cultural trends, marketing strategies, or demographic preferences in the UK.")
+                    
         else:
             st.warning("`genre_popularity_stats` or `df_merged` not found. Please ensure the genre analysis section was run.")
-        
+    
+        # --- Genre vs. Explicitness ---
         if 'genre_explicitness_percentage' in locals() and not df_merged.empty:
             st.write("**Genre vs. Explicitness:**")
-            fig_genre_exp, ax_genre_exp = plt.subplots(figsize=(14, 7), constrained_layout=True)
-            sns.barplot(
+            fig_genre_exp = px.bar(
                 x=genre_explicitness_percentage.index,
                 y=genre_explicitness_percentage.values,
-                palette='viridis', hue=genre_explicitness_percentage.index,
-                legend=False,
-                order=genre_explicitness_percentage.sort_values(ascending=False).index,
-                ax=ax_genre_exp
+                color=genre_explicitness_percentage.index,
+                labels={"x":"Genre","y":"Percentage Explicit (%)"},
+                title="Percentage of Explicit Content by Genre"
             )
-            ax_genre_exp.set_title('Percentage of Explicit Content by Genre')
-            ax_genre_exp.set_xlabel('Genre')
-            ax_genre_exp.set_ylabel('Percentage Explicit (%)')
-            ax_genre_exp.set_ylim(0, 100)
-            plt.xticks(rotation=45, ha='right')
-            st.pyplot(fig_genre_exp)
-            plt.close(fig_genre_exp)
-        
+            fig_genre_exp.update_layout(xaxis=dict(tickangle=45), yaxis=dict(range=[0,100]))
+            st.plotly_chart(fig_genre_exp, width='stretch')
+    
             if not genre_explicitness_percentage.empty:
-                most_explicit_genre = genre_explicitness_percentage.idxmax()
-                least_explicit_genre = genre_explicitness_percentage.idxmin()
-                most_explicit_pct = genre_explicitness_percentage.max()
-                least_explicit_pct = genre_explicitness_percentage.min()
+                # Sort by explicitness percentage
+                sorted_explicitness = genre_explicitness_percentage.sort_values(ascending=False)
+            
+                # Top and bottom genres
+                most_explicit_genre = sorted_explicitness.index[0]
+                least_explicit_genre = sorted_explicitness.index[-1]
+                most_explicit_pct = sorted_explicitness.iloc[0]
+                least_explicit_pct = sorted_explicitness.iloc[-1]
+                
                 with st.expander("ℹ️ More Information"):
-                    st.info(f"- **{most_explicit_genre}** shows the highest **content maturity** at **{most_explicit_pct:.1f}%** explicit tracks, while **{least_explicit_genre}** is most **family-friendly** at **{least_explicit_pct:.1f}%**, reflecting distinct **audience expectations** across genres in the current filtered dataset.")
+                    st.info(f"- **{most_explicit_genre}** has the highest explicitness ({most_explicit_pct:.1f}%), while **{least_explicit_genre}** is lowest ({least_explicit_pct:.1f}%).")
                     st.info("- Explicitness differences highlight genre-specific cultural norms and target audience demographics in UK music.")
         else:
             st.warning("`genre_explicitness_percentage` or `df_merged` not found. Please ensure the genre analysis section was run.")
-        
+    
+        # --- Genre vs. Duration ---
         if 'genre_duration_stats' in locals() and not df_merged.empty:
             st.write("**Genre vs. Duration:**")
-            fig_genre_dur, ax_genre_dur = plt.subplots(figsize=(14, 7), constrained_layout=True)
-            sns.boxplot(
-                x='genre', y='duration_min', data=df_merged,
-                palette='plasma', hue='genre', legend=False,
-                order=genre_duration_stats.index, ax=ax_genre_dur
+            fig_genre_dur = px.box(
+                df_merged,
+                x="genre", y="duration_min", color="genre",
+                category_orders={"genre": genre_duration_stats.index.tolist()},
+                labels={"genre":"Genre","duration_min":"Duration (minutes)"},
+                title="Track Duration Distribution by Genre"
             )
-            ax_genre_dur.set_title('Track Duration Distribution by Genre')
-            ax_genre_dur.set_xlabel('Genre')
-            ax_genre_dur.set_ylabel('Duration (minutes)')
-            plt.xticks(rotation=45, ha='right')
-            st.pyplot(fig_genre_dur)
-            plt.close(fig_genre_dur)
-        
+            fig_genre_dur.update_layout(xaxis=dict(tickangle=45))
+            st.plotly_chart(fig_genre_dur, width='stretch')
+    
             if not genre_duration_stats.empty:
-                longest_genre = genre_duration_stats.index[0]
-                shortest_genre = genre_duration_stats.index[-1]
-                longest_dur = genre_duration_stats['mean'].iloc[0]
-                shortest_dur = genre_duration_stats['mean'].iloc[-1]
+                # Sort by mean duration
+                sorted_duration = genre_duration_stats.sort_values(by="median", ascending=False)
+            
+                # Longest and shortest genres
+                longest_genre = sorted_duration.index[0]
+                shortest_genre = sorted_duration.index[-1]
+                longest_dur = sorted_duration["median"].iloc[0]
+                shortest_dur = sorted_duration["median"].iloc[-1]
+                
                 with st.expander("ℹ️ More Information"):
-                    st.info(f"- **{longest_genre}** dominates with longer **track lengths** (avg **{longest_dur:.2f}** min), while **{shortest_genre}** favors concise content (avg **{shortest_dur:.2f}** min), highlighting **genre-specific listening patterns** and production conventions in the UK market.")
+                    st.info(f"- **{longest_genre}** has longer tracks (median {longest_dur:.2f} min), while **{shortest_genre}** favors shorter tracks (median {shortest_dur:.2f} min).")
                     st.info("- Duration preferences by genre may reflect traditional formats, audience attention spans, or production styles in UK music culture.")
         else:
             st.warning("`genre_duration_stats` or `df_merged` not found. Please ensure the genre analysis section was run.")
-        
-        st.subheader("🎶 Genre Multivariate Analysis (3D)")
     
-        # Aggregation
-        genre_popularity_mean = df_merged.groupby('genre')['popularity'].mean()
-        genre_duration_mean = df_merged.groupby('genre')['duration_min'].mean()
+        # --- 3D Multivariate Analysis ---
+        st.subheader("🎶 Genre Multivariate Analysis (3D)")
+        genre_popularity_median = df_merged.groupby('genre')['popularity'].median()
+        genre_duration_median = df_merged.groupby('genre')['duration_min'].median()
         genre_explicitness_percentage = df_merged.groupby('genre')['is_explicit'].mean() * 100
     
-        genre_3d_df = pd.DataFrame({ 'Mean Popularity': genre_popularity_mean, 'Mean Duration (min)': genre_duration_mean, 'Explicit Content (%)': genre_explicitness_percentage
-        }).reset_index()
+        genre_3d_df = pd.DataFrame({
+            'Genre': genre_popularity_median.index,
+            'Median Popularity': genre_popularity_median.values,
+            'Median Duration (min)': genre_duration_median.values,
+            'Explicit Content (%)': genre_explicitness_percentage.values
+        }).fillna(0)
     
-        genre_3d_df = genre_3d_df.fillna(0)
-    
-        # Plotly 3D scatter
-        fig = px.scatter_3d( genre_3d_df, x='Mean Popularity', y='Mean Duration (min)', z='Explicit Content (%)', color='genre', hover_name='genre',
-            hover_data={ 'Mean Popularity': ':.2f', 'Mean Duration (min)': ':.2f', 'Explicit Content (%)': ':.2f' },
-            title='<b>3D Multivariate Analysis: Genre Characteristics</b>',
-            height=700,
-            labels={ 'Mean Popularity': 'Mean Popularity (0-100)', 'Mean Duration (min)': 'Mean Duration (minutes)', 'Explicit Content (%)': 'Explicit Content (%)' }
+        fig3d = px.scatter_3d(
+            genre_3d_df,
+            x="Median Popularity", y="Median Duration (min)", z="Explicit Content (%)",
+            color="Genre", hover_name="Genre",
+            hover_data={"Median Popularity":":.2f","Median Duration (min)":":.2f","Explicit Content (%)":":.2f"},
+            title="<b>3D Multivariate Analysis: Genre Characteristics</b>",
+            height=700
         )
-        
-        fig.update_layout(
-            scene_camera=dict(
-                up=dict(x=0, y=0, z=1),
-                center=dict(x=0, y=0, z=0),
-                eye=dict(x=1.5, y=1.5, z=1.5)
+        fig3d.update_layout(
+            scene=dict(
+                xaxis_title="Median Popularity (0-100)",
+                yaxis_title="Median Duration (minutes)",
+                zaxis_title="Explicit Content (%)"
             ),
-            margin=dict(l=0, r=0, b=0, t=50),
-            title=dict(
-                text='<b>3D Multivariate Analysis: Genre Characteristics</b>',
-                x=0.5,  # Center horizontally
-                y=0.95, # Position near the top
-                xanchor='center',
-                yanchor='top',
-                font=dict(size=20)  # Optional: adjust font size
-            ),
-            legend_title_text='<b>Genres</b>'
+            margin=dict(l=0,r=0,b=0,t=50),
+            legend_title_text="Genres"
         )
-        
-        # Render in Streamlit
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig3d, width='stretch')
     
-        # Insights expander
         with st.expander("📊 Insights from 3D Genre Analysis"):
-            st.info("- Genres with **higher popularity** tend to cluster with moderate durations.")
-            st.info("- **Explicit content percentage** varies widely across genres, showing cultural differences.")
+            st.info("- Genres with higher popularity tend to cluster with moderate durations.")
+            st.info("- Explicit content percentage varies widely across genres, showing cultural differences.")
             st.info("- The 3D view helps identify optimal combinations of duration, popularity, and explicitness for UK market penetration.")
     
-        # Show aggregated data table
         with st.expander("📋 Aggregated Genre Metrics Table"):
-            st.dataframe(genre_3d_df.style.format({ 'Mean Popularity': "{:.2f}", 'Mean Duration (min)': "{:.2f}", 'Explicit Content (%)': "{:.2f}" }))
-        
-        # Define a list of major genres and their definitions
+            st.dataframe(genre_3d_df.style.format({
+                "Mean Popularity":"{:.2f}",
+                "Mean Duration (min)":"{:.2f}",
+                "Explicit Content (%)":"{:.2f}"
+            }))
+    
+        # --- Genre Definitions ---
         genre_definitions = {
             "Pop": "Mainstream, catchy, and melodic songs designed for mass appeal.",
             "Rock": "Guitar-driven music with strong rhythms, often associated with rebellion and energy.",
@@ -2273,15 +2446,13 @@ with tab2:
             "Afrobeats": "Contemporary African pop blending traditional rhythms with modern influences.",
             "World Music": "Traditional and contemporary music from diverse cultures worldwide."
         }
-        
-        # Convert dictionary to DataFrame
-        df_genres = pd.DataFrame(list(genre_definitions.items()), columns=["Genre", "Definition"])
-        # Display in Streamlit
+        df_genres = pd.DataFrame(list(genre_definitions.items()), columns=["Genre","Definition"])
         with st.expander("ℹ️ General Knowledge Regarding The Context"):
             st.subheader("🎵 Major Song Genres and Definitions")
             st.table(df_genres)
+    
+        st.markdown("---")
         
-        st.markdown('---')
     with tabs[4]:
         # --- Recommendation 5: Multivariate Analysis ---
         st.subheader("Multivariate Analysis (3D Scatter Plot)")
@@ -2289,47 +2460,73 @@ with tab2:
         This 3D scatter plot visualizes the interplay between track duration, number of artists, and popularity,
         with points colored by chart success and distinguished by duration category (short-form vs. long-form).
         """)
-        
-        if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min', 'num_artists', 'popularity', 'chart_success', 'duration_category']):
-            # Use constrained_layout=True to avoid tight_layout warnings
-            fig_3d_scatter = plt.figure(figsize=(14, 12), constrained_layout=True)
-            ax_3d_scatter = fig_3d_scatter.add_subplot(111, projection='3d')
-        
-            # Plot the scatter points, using mapped markers
-            for chart_success_val, chart_success_color in {0: 'blue', 1: 'red'}.items():
-                for duration_cat_name, duration_cat_marker in {'short-form': 'o', 'long-form': '^'}.items():
-                    subset = df_merged[
-                        (df_merged['chart_success'] == chart_success_val) &
-                        (df_merged['duration_category'] == duration_cat_name)
-                    ]
-                    ax_3d_scatter.scatter(
-                        subset['duration_min'], subset['num_artists'], subset['popularity'], c=chart_success_color, 
-                        marker=duration_cat_marker, alpha=0.6, s=15,
-                        label=f'Chart Success: {chart_success_val}, Duration: {duration_cat_name}' if chart_success_val == 0 else "_nolegend_"  # Only add legend once for each type
+    
+        if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min','num_artists','popularity','chart_success','duration_category']):
+            # Interactive Plotly 3D scatter
+            fig_3d_scatter = px.scatter_3d(
+                df_merged,
+                x="duration_min",
+                y="num_artists",
+                z="popularity",
+                symbol="chart_success",
+                color="duration_category",   # short-form vs long-form
+                opacity=0.6,
+                size_max=10,
+                labels={
+                    "duration_min":"Duration (minutes)",
+                    "num_artists":"Number of Artists",
+                    "popularity":"Popularity",
+                    "chart_success":"Chart Success"
+                },
+                title="3D Scatter Plot: Duration, Artists, Popularity by Chart Success & Duration Category",
+                #color_discrete_sequence=px.colors.sequential.algae_r,
+                color_discrete_map={
+                    "short-form": "gold",    # custom color for short-form
+                    "long-form": "royalblue" # custom color for long-form
+                }
+            )
+    
+            # Customize layout
+            fig_3d_scatter.update_layout(
+                legend_title_text="⏳ Duration Category & 🏆 Chart Success", height=700,
+                scene=dict(
+                    xaxis_title="⏱️ Duration (minutes)",
+                    yaxis_title="👥 Number of Artists",
+                    zaxis_title="🔥 Popularity"
+                ),
+                title=dict(
+                    text="✨ 3D Scatter Plot: Duration, Artists, Popularity 🎶",
+                    x=0.5,
+                    xanchor="center",
+                    yanchor="top"
+                ),
+                margin=dict(l=50, r=150, b=50, t=100),  # extra right margin for legend/colorbar
+                legend=dict(
+                    x=1.05,   # push legend outside to the right
+                    y=0.5,
+                    xanchor="left",
+                    yanchor="top"
+                ),
+                coloraxis=dict(
+                    colorbar=dict(
+                        x=1.25,   # push colorbar further right so it doesn’t overlap legend
+                        y=0.5,
+                        xanchor="left",
+                        yanchor="middle",
+                        len=0.7   # shrink bar length if needed
                     )
-        
-            ax_3d_scatter.set_xlabel('Duration (minutes)')
-            ax_3d_scatter.set_ylabel('Number of Artists')
-            ax_3d_scatter.set_zlabel('Popularity')
-            ax_3d_scatter.set_title('3D Scatter Plot: Duration, Artists, Popularity by Chart Success & Duration Category')
-        
-            legend_elements = [
-                Line2D([0], [0], marker='o', color='w', label='Short-form', markerfacecolor='gray', markersize=10),
-                Line2D([0], [0], marker='^', color='w', label='Long-form', markerfacecolor='gray', markersize=10),
-                mpatches.Patch(color='blue', label='Not Top 10'), mpatches.Patch(color='red', label='Top 10')
-            ]
-            ax_3d_scatter.legend(handles=legend_elements, title='Legend')
-        
-            # Render and close cleanly
-            st.pyplot(fig_3d_scatter)
-            plt.close(fig_3d_scatter)
-        
+                )
+            )
+            
+            st.plotly_chart(fig_3d_scatter, width='stretch')
+            
             with st.expander("ℹ️ More Information"):
-                st.info("- Top 10 tracks cluster with moderate durations and collaborations, while non-Top 10 spread across longer solos, showing success patterns in UK charts.")
-                st.info("- Multivariate clusters indicate optimal combinations of duration, artists, and popularity for UK market penetration.")
+                st.info("🏆 Top 10 tracks cluster with moderate durations and collaborations.")
+                st.success("📈 Multivariate clusters indicate optimal combinations for UK market penetration.")
+                
         else:
             st.warning("Required data for 3D scatter plot not found. Please ensure the multivariate analysis section was run.")
-        
+    
         st.markdown('---')
 
     with tabs[5]:
@@ -2366,7 +2563,7 @@ with tab2:
                 st.write("**Baseline:**")
                 st.dataframe(st.session_state["baseline_day_of_week_counts"].unstack(fill_value=0))
                 st.write("**Filtered:**")
-                st.dataframe(filtered_df.groupby('day_of_week')['chart_success'].value_counts().unstack(fill_value=0))
+                st.dataframe(filtered_df.groupby('day_of_week')['chart_success'].value_counts().unstack(fill_value=0)) 
         
             # --- Duration × Num Artists Comparison ---
             with st.expander("🎶 Duration × Num Artists vs Popularity (Baseline vs Filtered)"):
@@ -2374,6 +2571,7 @@ with tab2:
                 st.dataframe(st.session_state["baseline_duration_x_num_artists"].head(10))
                 st.write("**Filtered Sample:**")
                 st.dataframe(filtered_df[['duration_x_num_artists','popularity','chart_success']].head(10))
+                
         
             # --- Explicit Duration Comparison ---
             with st.expander("⚡ Explicit Duration by Chart Success (Baseline vs Filtered)"):
@@ -2477,81 +2675,119 @@ with tab2:
                 st.dataframe(overall_corr_df)
         
         # --- Save baseline genre metrics once ---
-        if "baseline_genre_popularity" not in st.session_state:
-            st.session_state["baseline_genre_popularity"] = (df_merged.groupby('genre')['popularity'].mean().sort_values(ascending=False))
-        if "baseline_genre_explicitness" not in st.session_state:
-            st.session_state["baseline_genre_explicitness"] = (df_merged.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100)
-        if "baseline_genre_duration" not in st.session_state:
-            st.session_state["baseline_genre_duration"] = (df_merged.groupby('genre')['duration_min'].mean().sort_values(ascending=False))
+        if "baseline_genre_popularity_stats" not in st.session_state:
+            st.session_state["baseline_genre_popularity_stats"] = (
+                df_merged.groupby('genre')['popularity']
+                .agg(['mean', 'median', 'std'])
+                .sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
+            )
+        
+        if "baseline_genre_explicitness_stats" not in st.session_state:
+            st.session_state["baseline_genre_explicitness_stats"] = (
+                df_merged.groupby('genre')['is_explicit']
+                .agg(['mean', 'median', 'std'])
+                .sort_values(by=["mean", "median", "std"], ascending=[False, False, False]) * 100
+            )
+        
+        if "baseline_genre_duration_stats" not in st.session_state:
+            st.session_state["baseline_genre_duration_stats"] = (
+                df_merged.groupby('genre')['duration_min']
+                .agg(['mean', 'median', 'std'])
+                .sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
+            )
         
         # --- Genre Insights ---
         if len(filtered_df) == 0:
-            with st.container():
-                st.warning("Please reload the website and wait for the OpenAI Model to predict and calculate Genre Specific Statistics for the baseline metrics. Then select any required custom filter option to see the conclusion.")
+            st.warning("Please reload the website and wait for the OpenAI Model to predict and calculate Genre Specific Statistics for the baseline metrics. Then select any required custom filter option to see the conclusion.")
         else:
-            with st.container():
-                st.markdown("#### 🎵 Genre Insights")
+            st.markdown("#### 🎵 Genre Insights")
         
-                if is_any_filter_different:
-                    # --- Genre Popularity ---
-                    with st.expander("🎶 **Genre Popularity Insights**"):
-                        overall_genre_popularity = st.session_state["baseline_genre_popularity"]
-                        filtered_genre_popularity = (
-                            filtered_df.groupby('genre')['popularity'].mean().sort_values(ascending=False)
-                        )
+            # --- Genre Popularity ---
+            with st.expander("🎶 **Genre Popularity Insights**"):
+                overall_pop_stats = st.session_state["baseline_genre_popularity_stats"]
+                filtered_pop_stats = (
+                    filtered_df.groupby("genre")["popularity"]
+                    .agg(["mean", "median", "std"])
+                    .sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
+                )
         
-                        st.info(f"Overall Top 3 Genres: **{', '.join(overall_genre_popularity.head(3).index)}**")
-                        st.warning(f"Overall Bottom 3 Genres: **{', '.join(overall_genre_popularity.tail(3).index)}**")
-                        st.success(f"Filtered Top 3 Genres: **{', '.join(filtered_genre_popularity.head(3).index)}**")
-                        st.warning(f"Filtered Bottom 3 Genres: **{', '.join(filtered_genre_popularity.tail(3).index)}**")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.info(f"Overall Top 3 Genres (Mean): **{', '.join(overall_pop_stats.sort_values(by='mean', ascending=False).head(3).index)}**")
+                    st.warning(f"Overall Bottom 3 Genres (Mean): **{', '.join(overall_pop_stats.sort_values(by='mean').head(3).index)}**")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Mean): **{', '.join(filtered_pop_stats.sort_values(by='mean', ascending=False).head(3).index)}**")
+                        st.warning(f"Filtered Bottom 3 Genres (Mean): **{', '.join(filtered_pop_stats.sort_values(by='mean').head(3).index)}**")
+                with col2:
+                    st.info(f"Overall Top 3 Genres (Median): **{', '.join(overall_pop_stats.sort_values(by='median', ascending=False).head(3).index)}**")
+                    st.warning(f"Overall Bottom 3 Genres (Median): **{', '.join(overall_pop_stats.sort_values(by='median').head(3).index)}**")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Median): **{', '.join(filtered_pop_stats.sort_values(by='median', ascending=False).head(3).index)}**")
+                        st.warning(f"Filtered Bottom 3 Genres (Median): **{', '.join(filtered_pop_stats.sort_values(by='median').head(3).index)}**")
+                with col3:
+                    st.info(f"Overall Top 3 Genres (Std Dev): **{', '.join(overall_pop_stats.sort_values(by='std', ascending=False).head(3).index)}**")
+                    st.warning(f"Overall Bottom 3 Genres (Std Dev): **{', '.join(overall_pop_stats.sort_values(by='std').head(3).index)}**")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Std Dev): **{', '.join(filtered_pop_stats.sort_values(by='std', ascending=False).head(3).index)}**")
+                        st.warning(f"Filtered Bottom 3 Genres (Std Dev): **{', '.join(filtered_pop_stats.sort_values(by='std').head(3).index)}**")
         
-                        if list(overall_genre_popularity.head(3).index) == list(filtered_genre_popularity.head(3).index):
-                            st.success("Subset mirrors full dataset popularity trends → stable listener preferences.")
-                        else:
-                            st.info("Subset shows a different popularity mix → highlights emerging trends or niche preferences.")
+            # --- Genre Explicitness ---
+            with st.expander("⚡ **Genre Explicitness Insights**"):
+                overall_exp_stats = st.session_state["baseline_genre_explicitness_stats"]
+                filtered_exp_stats = (
+                    filtered_df.groupby("genre")["is_explicit"]
+                    .agg(["mean", "median", "std"])
+                    .sort_values(by=["mean", "median", "std"], ascending=[False, False, False]) * 100
+                )
         
-                    # --- Genre Explicitness ---
-                    with st.expander("⚡ **Genre Explicitness Insights**"):
-                        overall_explicitness = st.session_state["baseline_genre_explicitness"]
-                        filtered_explicitness = (
-                            filtered_df.groupby('genre')['is_explicit'].mean().sort_values(ascending=False) * 100
-                        )
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.info(f"Overall Top 3 Genres (Mean Explicitness): {', '.join(overall_exp_stats.sort_values(by='mean', ascending=False).head(3).index)}")
+                    st.warning(f"Overall Bottom 3 Genres (Mean Explicitness): {', '.join(overall_exp_stats.sort_values(by='mean').head(3).index)}")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Mean Explicitness): {', '.join(filtered_exp_stats.sort_values(by='mean', ascending=False).head(3).index)}")
+                        st.warning(f"Filtered Bottom 3 Genres (Mean Explicitness): {', '.join(filtered_exp_stats.sort_values(by='mean').head(3).index)}")
+                with col2:
+                    st.info(f"Overall Top 3 Genres (Median Explicitness): {', '.join(overall_exp_stats.sort_values(by='median', ascending=False).head(3).index)}")
+                    st.warning(f"Overall Bottom 3 Genres (Median Explicitness): {', '.join(overall_exp_stats.sort_values(by='median').head(3).index)}")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Median Explicitness): {', '.join(filtered_exp_stats.sort_values(by='median', ascending=False).head(3).index)}")
+                        st.warning(f"Filtered Bottom 3 Genres (Median Explicitness): {', '.join(filtered_exp_stats.sort_values(by='median').head(3).index)}")
+                with col3:
+                    st.info(f"Overall Top 3 Genres (Std Dev Explicitness): {', '.join(overall_exp_stats.sort_values(by='std', ascending=False).head(3).index)}")
+                    st.warning(f"Overall Bottom 3 Genres (Std Dev Explicitness): {', '.join(overall_exp_stats.sort_values(by='std').head(3).index)}")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Std Dev Explicitness): {', '.join(filtered_exp_stats.sort_values(by='std', ascending=False).head(3).index)}")
+                        st.warning(f"Filtered Bottom 3 Genres (Std Dev Explicitness): {', '.join(filtered_exp_stats.sort_values(by='std').head(3).index)}")
         
-                        st.info(f"Overall Most Explicit Genres: {', '.join(overall_explicitness.head(3).index)}")
-                        st.success(f"Overall Least Explicit Genres: {', '.join(overall_explicitness.tail(3).index)}")
-                        st.info(f"Filtered Most Explicit Genres: {', '.join(filtered_explicitness.head(3).index)}")
-                        st.success(f"Filtered Least Explicit Genres: {', '.join(filtered_explicitness.tail(3).index)}")
+            # --- Genre Duration --- 
+            with st.expander("⏳ **Genre Duration Insights**"):
+                overall_dur_stats = st.session_state["baseline_genre_duration_stats"]
+                filtered_dur_stats = (
+                    filtered_df.groupby("genre")["duration_min"]
+                    .agg(["mean", "median", "std"])
+                    .sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
+                )
         
-                    # --- Genre Duration ---
-                    with st.expander("⏳ **Genre Duration Insights**"):
-                        overall_duration = st.session_state["baseline_genre_duration"]
-                        filtered_duration = (
-                            filtered_df.groupby('genre')['duration_min'].mean().sort_values(ascending=False)
-                        )
-        
-                        st.info(f"Overall Longest Duration Genres: {', '.join(overall_duration.head(3).index)}")
-                        st.success(f"Overall Shortest Duration Genres: {', '.join(overall_duration.tail(3).index)}")
-                        st.info(f"Filtered Longest Duration Genres: {', '.join(filtered_duration.head(3).index)}")
-                        st.success(f"Filtered Shortest Duration Genres: {', '.join(filtered_duration.tail(3).index)}")
-        
-                else:
-                    # --- Baseline Only (No Filter Applied) ---
-                    with st.expander("🎶 **Genre Popularity Insights**"):
-                        overall_genre_popularity = st.session_state["baseline_genre_popularity"]
-                        st.info(f"Top 3 Genres by Popularity: **{', '.join(overall_genre_popularity.head(3).index)}**")
-                        st.warning(f"Bottom 3 Genres by Popularity: **{', '.join(overall_genre_popularity.tail(3).index)}**")
-        
-                    with st.expander("⚡ **Genre Explicitness Insights**"):
-                        overall_explicitness = st.session_state["baseline_genre_explicitness"]
-                        st.info(f"Most Explicit Genres: {', '.join(overall_explicitness.head(3).index)}")
-                        st.success(f"Least Explicit Genres: {', '.join(overall_explicitness.tail(3).index)}")
-        
-                    with st.expander("⏳ **Genre Duration Insights**"):
-                        overall_duration = st.session_state["baseline_genre_duration"]
-                        st.info(f"Longest Duration Genres: {', '.join(overall_duration.head(3).index)}")
-                        st.success(f"Shortest Duration Genres: {', '.join(overall_duration.tail(3).index)}")
-        
-                    st.info("These baseline metrics provide a comprehensive view of the UK music market dynamics.")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.info(f"Overall Top 3 Genres (Mean Duration): {', '.join(overall_dur_stats.sort_values(by='mean', ascending=False).head(3).index)}")
+                    st.warning(f"Overall Bottom 3 Genres (Mean Duration): {', '.join(overall_dur_stats.sort_values(by='mean').head(3).index)}")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Mean Duration): {', '.join(filtered_dur_stats.sort_values(by='mean', ascending=False).head(3).index)}")
+                        st.warning(f"Filtered Bottom 3 Genres (Mean Duration): {', '.join(filtered_dur_stats.sort_values(by='mean').head(3).index)}")
+                with col2:
+                    st.info(f"Overall Top 3 Genres (Median Duration): {', '.join(overall_dur_stats.sort_values(by='median', ascending=False).head(3).index)}")
+                    st.warning(f"Overall Bottom 3 Genres (Median Duration): {', '.join(overall_dur_stats.sort_values(by='median').head(3).index)}")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Median Duration): {', '.join(filtered_dur_stats.sort_values(by='median', ascending=False).head(3).index)}")
+                        st.warning(f"Filtered Bottom 3 Genres (Median Duration): {', '.join(filtered_dur_stats.sort_values(by='median').head(3).index)}")
+                with col3:
+                    st.info(f"Overall Top 3 Genres (Std Dev Duration): {', '.join(overall_dur_stats.sort_values(by='std', ascending=False).head(3).index)}")
+                    st.warning(f"Overall Bottom 3 Genres (Std Dev Duration): {', '.join(overall_dur_stats.sort_values(by='std').head(3).index)}")
+                    if is_any_filter_different:
+                        st.success(f"Filtered Top 3 Genres (Std Dev Duration): {', '.join(filtered_dur_stats.sort_values(by='std', ascending=False).head(3).index)}")
+                        st.warning(f"Filtered Bottom 3 Genres (Std Dev Duration): {', '.join(filtered_dur_stats.sort_values(by='std').head(3).index)}")
         
             st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
             st.success("✅ The dashboard is useful for Atlantic Recording Corporation to identify UK listener preference indicators, collaboration strengths, and content composition trends in real time.")
