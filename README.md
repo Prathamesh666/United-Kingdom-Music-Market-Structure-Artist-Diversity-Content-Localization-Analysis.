@@ -1,5 +1,10 @@
 # 🎶 United Kingdom Music Market Analysis Dashboard
 
+Welcome to the **United Kingdom Music Market Structure, Artist Diversity & Content Localization Analysis** project.  
+This repository is part of my **Machine Learning Internship (Unified Mentor Private Limited)** and showcases a comprehensive dashboard and research on the UK Top 50 Playlist.
+
+---
+
 ## 🛠️ Languages Used
 
 [![Google Colab](https://img.shields.io/badge/Google-Colab-orange?logo=googlecolab)](https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing)
@@ -8,11 +13,6 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-App-red?logo=streamlit)](https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app)
 [![GitHub Pages](https://img.shields.io/badge/GitHub-Pages-181717?logo=github)](https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-
-Welcome to the **United Kingdom Music Market Structure, Artist Diversity & Content Localization Analysis** project.  
-This repository is part of my **Machine Learning Internship (Unified Mentor Private Limited)** and showcases a comprehensive dashboard and research on the UK Top 50 Playlist.
-
----
 
 ## 📌 Project Overview
 The project explores:
