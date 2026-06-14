@@ -2,8 +2,8 @@
 
 ## 🛠️ Languages Used
 
-[![Google Colab](https://img.shields.io/badge/Google-Colab-orange?logo=googlecolab&style=for-the-badge&logoColor=white)](https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing)
-[![HTML](https://img.shields.io/badge/HTML-47.2%25-blue?logo=html5&style=for-the-badge&logoColor=white)](https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./Research%20Paper.html) 
+[![Google Colab](https://img.shields.io/badge/Google-Colab-orange?logo=googlecolab)](https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing)
+[![HTML](https://img.shields.io/badge/HTML-47.2%25-blue?logo=html5)](https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./Research%20Paper.html) 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-App-red?logo=streamlit)](https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app)
 [![GitHub Pages](https://img.shields.io/badge/GitHub-Pages-181717?logo=github)](https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis/)
