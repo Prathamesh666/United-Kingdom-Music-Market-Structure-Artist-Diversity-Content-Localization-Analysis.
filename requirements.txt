@@ -1,8 +1,6 @@
 streamlit
 pandas
 networkx
-matplotlib
-seaborn
 scikit-learn
 xgboost
 plotly

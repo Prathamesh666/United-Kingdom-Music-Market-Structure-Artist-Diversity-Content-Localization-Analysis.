@@ -2,13 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import itertools, collections
-import seaborn as sns
 import networkx as nx
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
-from matplotlib.lines import Line2D
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
@@ -19,7 +15,6 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.mixture import GaussianMixture
-import seaborn as sns
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 from tqdm.auto import tqdm # For progress_apply
@@ -394,7 +389,8 @@ with tab1:
                                     margin=dict(b=20, l=5, r=5, t=40),
                                     xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                                     yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-                                ))                    
+                                ))        
+                fig.update_layout(autosize=True)            
     
                 st.plotly_chart(fig, width='stretch')
     
@@ -501,6 +497,7 @@ with tab1:
                         )
                     )
                 )
+                fig3d.update_layout(autosize=True)
                 
                 st.plotly_chart(fig3d, width='stretch')
             
@@ -537,7 +534,7 @@ with tab1:
             color_discrete_map={"Explicit": "orange", "Non-Explicit": "skyblue"},
             title="Overall Distribution of Explicit vs. Non-Explicit Content (Filtered)"
         )
-        fig_pie.update_layout(title=dict( text="Overall Distribution of Explicit vs. Non-Explicit Content (Filtered)", x=0.5, xanchor="center",  y=0.95, yanchor="top"))
+        fig_pie.update_layout(autosize=True, title=dict( text="Overall Distribution of Explicit vs. Non-Explicit Content (Filtered)", x=0.5, xanchor="center",  y=0.95, yanchor="top"))
         with colA:
             st.plotly_chart(fig_pie,width='stretch')
             with st.expander("ℹ️ More Information"):
@@ -569,7 +566,7 @@ with tab1:
             )
             fig_bar.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
             fig_bar.update_yaxes(range=[0, 100], title="Percentage of Explicit Tracks (%)")
-            fig_bar.update_layout(title=dict( text="Percentage of Explicit Content by Rank Group (Filtered)", x=0.5, xanchor="center",  y=0.95, yanchor="top"))
+            fig_bar.update_layout(title=dict( text="Percentage of Explicit Content by Rank Group (Filtered)", x=0.5, xanchor="center",  y=0.95, yanchor="top"), autosize=True)
             
             with colB:
                 st.plotly_chart(fig_bar, width='stretch')
@@ -654,7 +651,7 @@ with tab1:
             fig_album_type.update_layout(
                 title=dict(text="Release Format Dominance in the UK Market: Distribution of Album Types (Filtered)", x=0.5, xanchor="center", y=0.95, yanchor="top", font=dict(size=12, family="Black")),
                 xaxis_title="Number of Tracks",
-                yaxis_title="Album Type", legend=dict(font=dict(size=12, family="Black"))
+                yaxis_title="Album Type", legend=dict(font=dict(size=12, family="Black")), autosize=True
             )
             fig_pie.update_traces(textfont=dict(size=12, family="Black"))
             with colA:
@@ -685,7 +682,7 @@ with tab1:
             # Make all text bold
             fig_pie.update_layout(
                 title=dict( text="Album Type Distribution (Filtered)", x=0.5, xanchor="center", y=0.95, yanchor="top", font=dict(size=14, family="Arial Black")  # Bold title
-                ), legend=dict(font=dict(size=12, family="Black")))
+                ), legend=dict(font=dict(size=12, family="Black")), autosize=True)
             fig_pie.update_traces(textfont=dict(size=12, family="Black"))
             with colB:
                 st.plotly_chart(fig_pie, width='stretch')
@@ -728,7 +725,7 @@ with tab1:
             fig_countplot.update_layout(
                 xaxis_title="Duration Category",
                 yaxis_title="Number of Tracks",
-                title=dict(x=0.5, xanchor="center", font=dict(size=16))
+                title=dict(x=0.5, xanchor="center", font=dict(size=16)), autosize=True
             )
             with colA:
                 st.plotly_chart(fig_countplot, width='stretch')
@@ -751,7 +748,7 @@ with tab1:
                 title="Overall Distribution of Track Duration Categories (Filtered)"
             )
             fig_duration_pie.update_layout(
-                title=dict(x=0.5, xanchor="center", font=dict(size=16))
+                title=dict(x=0.5, xanchor="center", font=dict(size=16)), autosize=True
             )
             with colB:
                 st.plotly_chart(fig_duration_pie, width='stretch')
@@ -793,7 +790,7 @@ with tab1:
                 fig_pop_duration.update_layout(
                     xaxis_title="Popularity Bucket",
                     yaxis_title="Number of Tracks",
-                    title=dict(x=0.5, xanchor="center", font=dict(size=16))
+                    title=dict(x=0.5, xanchor="center", font=dict(size=16)), autosize=True
                 )
                 st.plotly_chart(fig_pop_duration, width='stretch')
     
@@ -838,7 +835,7 @@ with tab1:
             fig_boxplot.update_layout(
                 xaxis_title="Popularity Bucket",
                 yaxis_title="Duration (Minutes)",
-                title=dict(x=0.5, xanchor="center", font=dict(size=16))
+                title=dict(x=0.5, xanchor="center", font=dict(size=16)), autosize=True
             )
             st.plotly_chart(fig_boxplot, width='stretch')
     
@@ -1923,15 +1920,6 @@ with tab2:
             "🔄 KMeans Clustering", "⚔️ Support Vector Machine (SVM)", "🔥 Gradient Boosting", "🎭 Gaussian Mixture"]
         )
     
-        # --- Helper function to plot heatmap ---
-        def plot_heatmap(metrics_df, title):
-            fig, ax = plt.subplots(figsize=(10,8))
-            sns.heatmap(metrics_df.drop(columns=['support'], errors='ignore'), 
-                        annot=True, cmap="viridis", fmt=".2f", ax=ax)
-            ax.set_title(title)
-            st.pyplot(fig)
-            plt.close(fig)
-    
         # --- Dictionary mapping model names to their metric DataFrames ---
         model_metrics = {
             "🧩 Logistic Regression": (metrics_df, lr_metrics_eng_df, lr_comparison_df),
@@ -1962,7 +1950,7 @@ with tab2:
                 )
                 fig_no_eng.update_layout(
                     margin=dict(t=80, b=40),
-                    title=dict(text=f"{model_choice} (No Features)", x=0.5, xanchor="center", y=0.95, yanchor="top")
+                    title=dict(text=f"{model_choice} (No Features)", x=0.5, xanchor="center", y=0.95, yanchor="top"), autosize=True
                 )
                 st.plotly_chart(fig_no_eng, width='stretch')
                 st.dataframe(df_no_eng)
@@ -1981,7 +1969,7 @@ with tab2:
                 )
                 fig_eng.update_layout(
                     margin=dict(t=80, b=40),
-                    title=dict(text=f"{model_choice} (Engineered Features)", x=0.5, xanchor="center", y=0.95, yanchor="top")
+                    title=dict(text=f"{model_choice} (Engineered Features)", x=0.5, xanchor="center", y=0.95, yanchor="top"), autosize=True
                 )
                 st.plotly_chart(fig_eng, width='stretch')
                 st.dataframe(df_eng)
@@ -2008,7 +1996,7 @@ with tab2:
                 margin=dict(t=120, b=80, l=50, r=50),  # extra space for title + axis labels
                 title_pad=dict(t=60),
                 yaxis=dict(range=[0, 1], title="Score"),
-                xaxis=dict(title="Metric", title_standoff=20)
+                xaxis=dict(title="Metric", title_standoff=20), autosize=True
             )
             
             # Custom facet titles for clarity
@@ -2032,7 +2020,7 @@ with tab2:
                 text="Accuracy", color_discrete_sequence=px.colors.sequential.Viridis
             )
             fig_acc.update_traces(texttemplate='%{text:.2f}', textposition='outside')
-            fig_acc.update_layout(title="Comparison of Model Accuracies", yaxis=dict(range=[0,1]))
+            fig_acc.update_layout(title="Comparison of Model Accuracies", yaxis=dict(range=[0,1]), autosize=True)
             st.plotly_chart(fig_acc, width='stretch')
     
             best_model_row = accuracy_summary_df.loc[accuracy_summary_df['Accuracy'].idxmax()]
@@ -2142,9 +2130,8 @@ with tab2:
                 yaxis=dict(tickvals=Y_class_indices, ticktext=class_labels[Y_class_indices]),
                 zaxis=dict(range=[0, 1])
             ),
-            autosize=False, width=1200, height=800,
             margin=dict(l=65, r=50, b=65, t=90),
-            updatemenus=[dict(type="dropdown", direction="down", x=0.0, y=1.15, showactive=True, buttons=buttons)]
+            updatemenus=[dict(type="dropdown", direction="down", x=0.0, y=1.15, showactive=True, buttons=buttons)], autosize=True
         )
     
         # --- Streamlit rendering ---
@@ -2186,7 +2173,7 @@ with tab2:
                 ticktext=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
             ),
             yaxis_title="Number of Tracks",
-            legend_title="Chart Success (0=No, 1=Yes)"
+            legend_title="Chart Success (0=No, 1=Yes)", autosize=True
         )
         st.plotly_chart(fig_day_of_week, width='stretch')
     
@@ -2206,7 +2193,7 @@ with tab2:
         )
         fig_duration_x_artists.update_layout(
             title="Interaction of Duration and Number of Artists vs. Popularity by Chart Success",
-            legend_title="Chart Success (0=No, 1=Yes)"
+            legend_title="Chart Success (0=No, 1=Yes)", autosize=True
         )
         st.plotly_chart(fig_duration_x_artists, width='stretch')
     
@@ -2230,7 +2217,7 @@ with tab2:
                 tickmode="array",
                 tickvals=[0,1],
                 ticktext=['Not Top 10','Top 10']
-            )
+            ), autosize=True
         )
         st.plotly_chart(fig_explicit_duration, width='stretch')
     
@@ -2268,8 +2255,7 @@ with tab2:
             )
             fig_unique_artists.update_layout(
                 xaxis=dict(title="Date", tickangle=0),
-                yaxis=dict(title="Number of Unique Artists"),
-                hovermode="x unified", height=600
+                yaxis=dict(title="Number of Unique Artists"), autosize=True
             )
     
             st.plotly_chart(fig_unique_artists, width='stretch')
@@ -2301,7 +2287,7 @@ with tab2:
                 labels={"genre":"Genre","popularity":"Popularity Score"},
                 title="Popularity Distribution by Genre"
             )
-            fig_genre_pop.update_layout(xaxis=dict(tickangle=45))
+            fig_genre_pop.update_layout(xaxis=dict(tickangle=45), autosize=True)
             st.plotly_chart(fig_genre_pop, width='stretch')
     
             if not genre_popularity_stats.empty:
@@ -2331,7 +2317,7 @@ with tab2:
                 labels={"x":"Genre","y":"Percentage Explicit (%)"},
                 title="Percentage of Explicit Content by Genre"
             )
-            fig_genre_exp.update_layout(xaxis=dict(tickangle=45), yaxis=dict(range=[0,100]))
+            fig_genre_exp.update_layout(xaxis=dict(tickangle=45), yaxis=dict(range=[0,100]), autosize=True)
             st.plotly_chart(fig_genre_exp, width='stretch')
     
             if not genre_explicitness_percentage.empty:
@@ -2360,7 +2346,7 @@ with tab2:
                 labels={"genre":"Genre","duration_min":"Duration (minutes)"},
                 title="Track Duration Distribution by Genre"
             )
-            fig_genre_dur.update_layout(xaxis=dict(tickangle=45))
+            fig_genre_dur.update_layout(xaxis=dict(tickangle=45), autosize=True)
             st.plotly_chart(fig_genre_dur, width='stretch')
     
             if not genre_duration_stats.empty:
@@ -2407,7 +2393,7 @@ with tab2:
                 zaxis_title="Explicit Content (%)"
             ),
             margin=dict(l=0,r=0,b=0,t=50),
-            legend_title_text="Genres"
+            legend_title_text="Genres", autosize=True
         )
         st.plotly_chart(fig3d, width='stretch')
     
@@ -2488,7 +2474,7 @@ with tab2:
     
             # Customize layout
             fig_3d_scatter.update_layout(
-                legend_title_text="⏳ Duration Category & 🏆 Chart Success", height=700,
+                legend_title_text="⏳ Duration Category & 🏆 Chart Success", autosize=True,
                 scene=dict(
                     xaxis_title="⏱️ Duration (minutes)",
                     yaxis_title="👥 Number of Artists",
