@@ -48,11 +48,18 @@ Click on any file below to view it directly in GitHub:
 
 - [Project_Details_Unified_Mentor.md](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/Project_Details_Unified_Mentor.md) → Internship project documentation
 
+- [LICENSE.md](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/LICENSE.md) → MIT LICENSE
+
 - [Atlantic_United_Kingdom.csv](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/Atlantic_United_Kingdom.csv) → Dataset
 
 - [Demonstration_Video.mp4](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/Demonstration_Video.mp4) → Project walkthrough
 
 - [requirements.txt](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/requirements.txt) → Dependencies
+
+### 📁 Static Assets
+- [static/Symbol.png](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/static/Symbol.png) → Icon used in dashboard
+- [static/background.js](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/static/background.js) → Background script
+- [static/DNAbg.js](https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./blob/main/static/DNAbg.js) → DNA helix background script
 
 ---
 
