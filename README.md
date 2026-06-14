@@ -8,7 +8,7 @@ This repository is part of my **Machine Learning Internship (Unified Mentor Priv
 ## 🛠️ Languages Used
 
 [![Google Colab](https://img.shields.io/badge/Google-Colab-orange?logo=googlecolab)](https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing)
-[![HTML](https://img.shields.io/badge/HTML-47.2%25-blue?logo=html5)](https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./Research%20Paper.html) 
+[![HTML](https://img.shields.io/badge/HTML-blue?logo=html5)](https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./Research%20Paper.html) 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-App-red?logo=streamlit)](https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app)
 [![GitHub Pages](https://img.shields.io/badge/GitHub-Pages-181717?logo=github)](https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis/)
@@ -87,4 +87,4 @@ cd United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-A
 pip install -r requirements.txt
 streamlit run app.py
 ```
-[**Please Note:** Dont forget to substitute your own Huggingface Token for recommendational analysis]
+[**Please Note:** Don't forget to substitute your own Huggingface's Token for recommendational analysis]
