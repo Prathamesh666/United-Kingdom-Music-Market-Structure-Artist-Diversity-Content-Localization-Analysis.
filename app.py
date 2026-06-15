@@ -55,10 +55,11 @@ def validate_and_preprocess(df):
         num_artists=('artist', 'nunique')
     ).reset_index()
     track_collaborations['is_collaboration'] = track_collaborations['num_artists'] > 1
+    track_collaborations['rank_group'] = track_collaborations['position'].apply(assign_rank_group)
 
     df_merged = pd.merge(
         df,
-        track_collaborations[['date', 'song', 'position', 'is_collaboration']],
+        track_collaborations[['date', 'song', 'position', 'is_collaboration', 'num_artists', 'rank_group']],
         on=['date', 'song', 'position'],
         how='left'
     )
@@ -163,6 +164,341 @@ duration_percentage = (duration_counts / total_tracks_duration) * 100
 
 st.caption("KPIs calculated successfully.")
 
+# --- Feature Engineering ---
+# Extract day of the week (0=Monday, 6=Sunday) and month
+df_merged['day_of_week'] = df_merged['date'].dt.dayofweek
+df_merged['month'] = df_merged['date'].dt.month
+
+# Create interaction feature: duration_x_num_artists
+df_merged['duration_x_num_artists'] = df_merged['duration_min'] * df_merged['num_artists']
+
+# Create explicit_duration interaction feature
+df_merged['explicit_duration'] = df_merged['is_explicit'] * df_merged['duration_min']
+
+print("Engineered features 'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration' created.")
+
+# --- Predictive Modeling for Chart Success (No Engineering Features) ---
+# Model 1: Logistic Regression
+# Define the target variable: Chart Success (Top 10 vs. not Top 10)
+df_merged['chart_success'] = (df_merged['position'] <= 10).astype(int)
+
+# Select features for Logistic Regression
+features_lr = ['duration_min', 'num_artists', 'is_explicit']
+categorical_features_lr = ['album_type', 'duration_category']
+df_temp_lr = df_merged[features_lr + categorical_features_lr].copy()
+
+try: 
+    X_lr = pd.get_dummies(df_temp_lr, columns=categorical_features_lr, drop_first=True)
+    y_lr = df_merged['chart_success']
+    
+    X_train_no_eng, X_test_no_eng, y_train_no_eng, y_test_no_eng = train_test_split(X_lr, y_lr, test_size=0.2, random_state=42, stratify=y_lr)
+    
+    # Helper function for metrics
+    def get_metrics(y_true, y_pred, model_name):
+        acc = accuracy_score(y_true, y_pred)
+        metrics_df = pd.DataFrame(classification_report(y_true, y_pred, output_dict=True)).transpose()
+        metrics_df = metrics_df.drop(labels=['accuracy','macro avg','weighted avg'])
+        metrics_df.rename(index={'0':'Class 0 (Not Top 10)','1':'Class 1 (Top 10)'}, inplace=True)
+        return acc, metrics_df
+    
+    model_lr = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
+    model_lr.fit(X_train_no_eng, y_train_no_eng)
+    y_pred_lr = model_lr.predict(X_test_no_eng)
+    lr_accuracy_no_eng, metrics_df = get_metrics(y_test_no_eng, y_pred_lr, "Logistic Regression (No Features)")
+    
+    # --- Module 2: Linear Regression ---
+    linear_model_no_eng = LinearRegression()
+    linear_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    linear_y_pred_no_eng = linear_model_no_eng.predict(X_test_no_eng)
+    Lr_accuracy_no_eng = accuracy_score(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int))
+    Lr_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
+    Lr_metrics_df_no_eng = Lr_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+    Lr_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+    
+    # --- Model 3: Random Forest (No Engineered Features) ---
+    # Use the same feature set as Logistic Regression for comparison without engineered features
+    rf_model_no_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+    rf_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    rf_y_pred_no_eng = rf_model_no_eng.predict(X_test_no_eng)
+    rf_accuracy_no_eng, rf_metrics_df_no_eng = get_metrics(y_test_no_eng, rf_y_pred_no_eng, "Random Forest (No Features)")
+    
+    # --- Model 4: XGBoost (No Engineered Features) ---
+    xgb_model_no_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
+        scale_pos_weight=(len(y_train_no_eng) - y_train_no_eng.sum()) / y_train_no_eng.sum()) # Handle class imbalance
+    xgb_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    xgb_y_pred_no_eng = xgb_model_no_eng.predict(X_test_no_eng)
+    xgb_accuracy_no_eng, xgb_metrics_df_no_eng = get_metrics(y_test_no_eng, xgb_y_pred_no_eng, "XGBoost (No Features)")
+    
+    # --- Model 5: K-Means Clustering ---
+    kmeans_no_eng = KMeans(n_clusters=2, random_state=42)
+    kmeans_no_eng.fit(X_train_no_eng)
+    kmeans_labels_no_eng = kmeans_no_eng.predict(X_test_no_eng)
+    kmeans_accuracy_no_eng, kmeans_metrics_df_no_eng = get_metrics(y_test_no_eng, kmeans_labels_no_eng, "KMeans (No Features)")
+    
+    # --- Model 6: SVM ---
+    svm_no_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
+    svm_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    svm_y_pred_no_eng = svm_no_eng.predict(X_test_no_eng)
+    svm_accuracy_no_eng, svm_metrics_df_no_eng = get_metrics(y_test_no_eng, svm_y_pred_no_eng, "SVM (No Features)")
+    
+    # --- Model 7: Gradient Boosting ---
+    gb_no_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
+    gb_no_eng.fit(X_train_no_eng, y_train_no_eng)
+    gb_y_pred_no_eng = gb_no_eng.predict(X_test_no_eng)
+    gb_accuracy_no_eng, gb_metrics_df_no_eng = get_metrics(y_test_no_eng, gb_y_pred_no_eng, "Gradient Boosting (No Features)")
+    
+    # --- Model 8: Gaussian Mixture ---
+    gmm_no_eng = GaussianMixture(n_components=2, random_state=42)
+    gmm_no_eng.fit(X_train_no_eng)
+    gmm_labels_no_eng = gmm_no_eng.predict(X_test_no_eng)
+    gmm_accuracy_no_eng, gmm_metrics_df_no_eng = get_metrics(y_test_no_eng, gmm_labels_no_eng, "Gaussian Mixture (No Features)")
+    
+    # --- 3.1 Predictive Modeling For Chart Success (With Engineered Features) ---
+    features_engineered_rf = [
+        'duration_min', 'num_artists', 'is_explicit',
+        'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration'
+    ]
+    categorical_features_rf_eng = ['album_type', 'duration_category']
+    
+    df_temp_engineered_rf = df_merged[features_engineered_rf + categorical_features_rf_eng].copy()
+    X_engineered_rf = pd.get_dummies(df_temp_engineered_rf, columns=categorical_features_rf_eng, drop_first=True)
+    y_engineered_rf = df_merged['chart_success']
+    
+    X_train_eng, X_test_eng, y_train_eng, y_test_eng = train_test_split(X_engineered_rf, y_engineered_rf, test_size=0.2, random_state=42, stratify=y_engineered_rf)
+    
+    # --- Model 1: Logistic Regression ---
+    lr_model_eng = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
+    lr_model_eng.fit(X_train_eng, y_train_eng)
+    lr_y_pred_eng = lr_model_eng.predict(X_test_eng)
+    lr_accuracy_eng, lr_metrics_eng_df = get_metrics(y_test_eng, lr_y_pred_eng, "Logistic Regression (Engineered Features)")
+    
+    # --- Model 2: Linear Regression ---
+    Lr_model_eng = LinearRegression()
+    Lr_model_eng.fit(X_train_eng, y_train_eng)
+    Lr_y_pred_eng = Lr_model_eng.predict(X_test_eng)
+    Lr_accuracy_eng = accuracy_score(y_test_eng, (Lr_y_pred_eng> 0.5).astype(int))
+    Lr_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, (Lr_y_pred_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
+    Lr_metrics_eng_df = Lr_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
+    Lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
+    
+    # --- Model 3: Random Forest ---
+    rf_model_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+    rf_model_eng.fit(X_train_eng, y_train_eng)
+    rf_y_pred_eng = rf_model_eng.predict(X_test_eng)
+    rf_accuracy_eng, rf_metrics_eng_df = get_metrics(y_test_eng, rf_y_pred_eng, "Random Forest (Engineered Features)")
+    
+    # --- Model 4: XGBoost ---
+    xgb_model_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
+        scale_pos_weight=(len(y_train_eng) - y_train_eng.sum()) / y_train_eng.sum()) # Handle class imbalance
+    xgb_model_eng.fit(X_train_eng, y_train_eng)
+    xgb_y_pred_eng = xgb_model_eng.predict(X_test_eng)
+    xgb_accuracy_eng, xgb_metrics_eng_df = get_metrics(y_test_eng, xgb_y_pred_eng, "XGBoost (Engineered Features)")
+    
+    # --- Model 5: KMeans --- 
+    kmeans_eng = KMeans(n_clusters=2, random_state=42)
+    kmeans_eng.fit(X_train_eng)
+    kmeans_labels_eng = kmeans_eng.predict(X_test_eng)
+    kmeans_accuracy_eng, kmeans_metrics_df_eng = get_metrics(y_test_eng, kmeans_labels_eng, "KMeans (Engineered Features)")
+    
+    # --- Model 6: SVM --- 
+    svm_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
+    svm_eng.fit(X_train_eng, y_train_eng)
+    svm_y_pred_eng = svm_eng.predict(X_test_eng)
+    svm_accuracy_eng, svm_metrics_df_eng = get_metrics(y_test_eng, svm_y_pred_eng, "SVM (Engineered Features)")
+    
+    # --- Model 7: Gradient Boosting --- 
+    gb_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
+    gb_eng.fit(X_train_eng, y_train_eng)
+    gb_y_pred_eng = gb_eng.predict(X_test_eng)
+    gb_accuracy_eng, gb_metrics_df_eng = get_metrics(y_test_eng, gb_y_pred_eng, "Gradient Boosting (Engineered Features)")
+    
+    # --- Model 8: Gaussian Mixture --- 
+    gmm_eng = GaussianMixture(n_components=2, random_state=42)
+    gmm_eng.fit(X_train_eng)
+    gmm_labels_eng = gmm_eng.predict(X_test_eng)
+    gmm_accuracy_eng, gmm_metrics_df_eng = get_metrics(y_test_eng, gmm_labels_eng, "Gaussian Mixture (Engineered Features)")
+    
+    # --- 3.3 Model Comparison DataFrames for All Models ---
+    def build_comparison_df(metrics_no_eng_df, metrics_eng_df, model_name):
+        comparison_data = []
+        metrics_no_eng_dict = metrics_no_eng_df.to_dict('index')
+        metrics_eng_dict = metrics_eng_df.to_dict('index')
+    
+        for class_name_key in metrics_no_eng_dict:
+            metrics = metrics_no_eng_dict[class_name_key]
+            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+        for class_name_key in metrics_eng_dict:
+            metrics = metrics_eng_dict[class_name_key]
+            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+        return pd.DataFrame(comparison_data)
+    
+    # Build comparison DataFrames for each model
+    lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
+    linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
+    rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
+    xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_eng_df, "XGBoost")
+    kmeans_comparison_df = build_comparison_df(kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, "KMeans")
+    svm_comparison_df = build_comparison_df(svm_metrics_df_no_eng, svm_metrics_df_eng, "SVM")
+    gb_comparison_df = build_comparison_df(gb_metrics_df_no_eng, gb_metrics_df_eng, "Gradient Boosting")
+    gmm_comparison_df = build_comparison_df(gmm_metrics_df_no_eng, gmm_metrics_df_eng, "Gaussian Mixture")
+    
+    # Combine all into one master comparison DataFrame
+    all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
+                                        kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
+    
+    # Create comparison_df for plotting RF performance with/without engineered features
+    comparison_data = []
+    
+    rf_metrics_no_eng_dict = rf_metrics_df_no_eng.to_dict('index')
+    rf_metrics_with_eng_dict = rf_metrics_eng_df.to_dict('index')
+    
+    for class_name_key in rf_metrics_no_eng_dict:
+        metrics = rf_metrics_no_eng_dict[class_name_key]
+        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+    for class_name_key in rf_metrics_with_eng_dict:
+        metrics = rf_metrics_with_eng_dict[class_name_key]
+        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+    
+    comparison_df = pd.DataFrame(comparison_data)
+    
+    # --- 3.4 Model Accuracy Comparison DataFrames to find best model ---
+    # Create a DataFrame for the summary table
+    accuracy_summary_df = pd.DataFrame({
+        'Model': [
+            'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
+            'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
+            'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)', 'KMeans (No Features)', 'KMeans (Engineered Features)',
+            'SVM (No Features)', 'SVM (Engineered Features)', 'Gradient Boosting (No Features)', 'Gradient Boosting (Engineered Features)',
+            'Gaussian Mixture (No Features)', 'Gaussian Mixture (Engineered Features)'
+        ],
+        'Accuracy': [
+            lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng,
+            kmeans_accuracy_no_eng, kmeans_accuracy_eng, svm_accuracy_no_eng, svm_accuracy_eng, gb_accuracy_no_eng, gb_accuracy_eng, gmm_accuracy_no_eng, gmm_accuracy_eng
+        ]
+    })
+
+except Exception as e:   
+    print(f"Error during model training and comparison: {e}")
+    st.warning("Not enough data for models to perform testing. Please adjust your filters to include more data.")
+
+# --- Genre Prediction Function and Application  ---
+from huggingface_hub import login
+# Try Streamlit secrets first
+hf_token = "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"
+
+if hf_token:
+    try:
+        login(token=hf_token)
+    except Exception as e:
+        st.warning(f"⚠️ Hugging Face token found but login failed: {e}")
+else:
+    st.warning("⚠️ Hugging Face token not found. Please set HF_TOKEN in secrets.toml or .env")
+    
+# Conceptual definition of major genres
+major_genres = ['Pop', 'Rock', 'Hip-Hop/Rap', 'Jazz', 'Country',
+                'Classical', 'Dance', 'R&B/soul', 'Electronic/EDM', 'Folk',
+                'Metal', 'Blues', 'Reggae', 'Instrumental', 'Indie',
+                'Gospel', 'Punk', 'Latin', 'Afrobeats', 'World Music']
+# Load CLIP model from openai
+model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+def predict_genre_from_image_ai_conceptual(image_url):
+    """
+    Predict genre from album cover URL using CLIP zero-shot classification.
+    Always returns one of the major_genres.
+    """
+    if pd.isna(image_url) or not isinstance(image_url, str) or not image_url.startswith('http'):
+        return 'Unknown'
+    try:
+        response = requests.get(image_url, timeout=5)
+        response.raise_for_status()
+        image = Image.open(io.BytesIO(response.content)).convert("RGB")
+
+        # Compare image against all genre prompts
+        # inputs = processor(text=major_genres, images=image, return_tensors="pt", padding=True)
+        text_inputs = processor.tokenizer(
+            major_genres,
+            padding=True,
+            return_tensors="pt"
+        )
+        image_inputs = processor.image_processor(
+            images=image,
+            return_tensors="pt"
+        )
+
+        inputs = {
+            **text_inputs,
+            **image_inputs
+        }
+        
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits_per_image = outputs.logits_per_image
+            probs = logits_per_image.softmax(dim=1)
+
+        predicted_idx = probs.argmax(-1).item()
+        return major_genres[predicted_idx]
+    except Exception:
+        return "Unknown"
+
+# --- Initialize or reuse genre mapping in Streamlit session state ---
+if "genre_mapping" not in st.session_state:
+    st.session_state["genre_mapping"] = {}
+
+@st.cache_data(show_spinner=False)
+def build_genre_mapping(unique_urls, existing_mapping):
+    """
+    Predict genres only for new album cover URLs not already in mapping.
+    Shows a Streamlit progress bar with percentage in the UI,
+    and a tqdm progress bar in the console logs.
+    """
+    mapping = dict(existing_mapping)
+    progress_bar = st.progress(0)
+    progress_text_success = st.empty()
+    progress_text_info = st.empty()
+    total = len(unique_urls)
+
+    # tqdm progress bar in console
+    for i, url in enumerate(tqdm(unique_urls, desc="Genre prediction progress", unit="track")):
+        if url not in mapping:  # only predict if not already cached
+            mapping[url] = predict_genre_from_image_ai_conceptual(url)
+
+        percent_complete = int(((i + 1) / total) * 100)
+        # Update Streamlit UI
+        progress_text_success.success(f"✅ In Progress: {percent_complete}%")
+        progress_bar.progress((i + 1) / total)
+        progress_text_info.info("⏳ Wait for about 3–4 minutes while we prepare your analysis tabs.")
+
+    # Clear progress bar and text after completion
+    progress_bar.empty()
+    progress_text_success.empty()
+    progress_text_info.empty()
+
+    # Optional: show completion message in UI
+    print("✅ Genre prediction complete!")
+
+    return mapping
+
+# --- Build or update mapping based on current filters ---
+unique_album_covers = df_merged['album_cover_url'].dropna().unique().tolist()
+st.session_state["genre_mapping"] = build_genre_mapping( unique_album_covers, st.session_state["genre_mapping"]) # type: ignore
+
+# Apply to full dataset
+df_merged['genre'] = df_merged['album_cover_url'].map(st.session_state["genre_mapping"])
+print("Conceptual AI-driven genre prediction function defined.\nGenre Prediction is in progress and may take some time (2-3 minutes)")
+
 st.sidebar.header('Filter Options')
 
 # --- Date Range Selector ---
@@ -237,6 +573,19 @@ with st.spinner("⏳ Loading popularity filter..."):
     )
     mask &= (df_merged['popularity'] >= selected_popularity[0]) & (df_merged['popularity'] <= selected_popularity[1])
 
+# --- Genre Filter (20 major genres) ---
+with st.spinner("⏳ Loading genre filter... this may take a few minutes"):
+    selected_genres = st.sidebar.multiselect(
+        'Genre',
+        options=major_genres,
+        default=major_genres
+    )
+
+if selected_genres and 'genre' in df_merged.columns:
+    mask &= df_merged['genre'].isin(selected_genres)
+
+print("Genre prediction applied to your filtered dataset.")
+
 # --- Apply mask once ---
 filtered_df = df_merged.loc[mask].copy()
 
@@ -255,6 +604,7 @@ is_track_type_different = (collaboration_choice != default_collaboration_choice)
 is_album_type_different = (set(selected_album_types) != set(default_album_types))
 is_duration_filter_different = (duration_range != default_duration_range)
 is_popularity_filter_different = (selected_popularity != default_popularity_range)
+is_genre_filter_different = (set(selected_genres) != set(major_genres))
 
 # --- Combine into one flag ---
 is_any_filter_different = (
@@ -264,7 +614,48 @@ is_any_filter_different = (
     or is_album_type_different
     or is_duration_filter_different
     or is_popularity_filter_different
+    or is_genre_filter_different
 )
+
+if not is_any_filter_different:
+    st.session_state["baseline_total"] = len(unique_album_covers)
+    baseline_total = len(unique_album_covers)
+else:
+    current_total = len(filtered_df['album_cover_url'].dropna().unique())
+    delta = current_total - st.session_state["baseline_total"]
+    
+    if delta >= 0:
+        delta_str = f"⬆️ +{delta}"
+    else:
+        delta_str = f"⬇️ {delta}"
+
+# --- Sidebar caption with arrows ---
+with st.sidebar:
+    if is_any_filter_different:
+        st.caption(f"🎵 Total Songs: {current_total} ({delta_str})")
+    else:
+        st.caption(f"🎵 Total Songs: {baseline_total}")
+        
+if "accuracy_summary_df_original" not in st.session_state:
+    if not is_any_filter_different:
+        st.session_state["accuracy_summary_df_original"] = accuracy_summary_df
+        
+# --- Time Series Data (`unique_artists_per_day`) ---
+unique_artists_per_day = filtered_df.groupby('date')['artist'].nunique()
+# --- Save baseline unique artists per day once ---
+if "baseline_unique_artists_per_day" not in st.session_state:
+    st.session_state["baseline_unique_artists_per_day"] = (
+        df_merged.groupby('date')['artist'].nunique()
+    )
+print("Unique artists per day calculated for Time Series Analysis.")
+
+# --- Genre-Specific Analysis DataFrames ---
+genre_popularity_stats = filtered_df.groupby('genre')['popularity'].agg(['mean', 'median', 'std']).sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
+genre_explicitness_percentage = filtered_df.groupby('genre')['is_explicit'].mean() * 100
+genre_duration_stats = filtered_df.groupby('genre')['duration_min'].agg(['mean', 'median', 'std']).sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
+print("✅ Genre-specific statistics calculated.")
+
+print("--- All required dataframes and variables are now prepared. ---")
 
 tab1, tab2 = st.tabs(["UK Music Market Structural Analysis", 
                     "Recommendational Analysis for UK's Music Listeners"])
@@ -274,8 +665,8 @@ with tab1:
     st.title('United Kingdom Music Market Structural Analysis')
     # Tabs for each subheader
     tabs = st.tabs([
-        "Filtered Dataset Preview",
-        "🎤 Artist Dominance & Diversity",
+        "🔎 Filtered Dataset Preview",
+        "👑 Artist Dominance & Diversity",
         "🤝 Collaboration Structures",
         "🔞 Content Explicitness",
         "💿 Album Structure & Release Strategy",
@@ -285,12 +676,12 @@ with tab1:
         "📌 Strategic Insights"
     ])
     with tabs[0]:
-        st.write("### Filtered Dataset Preview")
-        st.dataframe(df_merged.head())
+        st.subheader("📋 Filtered Dataset Preview")
+        st.dataframe(filtered_df.head())
         
         st.markdown('---')
     with tabs[1]:
-        st.subheader('Artist Dominance Leaderboard')
+        st.subheader('🎤 Artist Dominance Leaderboard')
         # Calculate total appearances for each artist in the filtered data
         total_appearances_per_artist_filtered = filtered_df['artist'].value_counts()
         # Select the top 10 artists from this calculation
@@ -308,7 +699,7 @@ with tab1:
         st.markdown('---')
     
     with tabs[2]:
-        st.subheader('Artist Collaboration Network')
+        st.subheader('🕸️ Artist Collaboration Network')
     
         if collaboration_choice == 'Solo Tracks':
             st.warning("The artist collaboration network is displayed only when 'All Tracks' or 'Collaborative Tracks' are selected. Please adjust the 'Track Type' filter to view the network.")
@@ -413,7 +804,7 @@ with tab1:
             
                 # --- 3D Interactive Visualization ---
                 st.markdown('---')
-                st.subheader("Interactive 3D Collaboration Network")
+                st.subheader("🌐 3D Collaboration World")
                 
                 # Use the same collaboration_counts_filtered for 3D
                 pos_3d = nx.spring_layout(G, dim=3, k=0.15, iterations=50, seed=40)
@@ -507,7 +898,7 @@ with tab1:
         st.markdown('---')
         
     with tabs[3]: 
-        st.subheader('Content Explicitness Analysis')
+        st.subheader('☢️ Content Explicitness Analysis')
         
         # Calculate total count of explicit and non-explicit tracks in filtered data
         explicitness_counts_filtered = filtered_df['is_explicit'].value_counts()
@@ -524,12 +915,12 @@ with tab1:
         # Pie chart using Plotly
         pie_data = pd.DataFrame({
             "Content Type": ['Explicit', 'Non-Explicit'],
-            "Count": [explicitness_counts_filtered.get(True, 0), explicitness_counts_filtered.get(False, 0)]
+            "Tracks": [explicitness_counts_filtered.get(True, 0), explicitness_counts_filtered.get(False, 0)]
         })
         fig_pie = px.pie(
             pie_data,
             names="Content Type",
-            values="Count",
+            values="Tracks",
             color="Content Type",
             color_discrete_map={"Explicit": "orange", "Non-Explicit": "skyblue"},
             title="Overall Distribution of Explicit vs. Non-Explicit Content (Filtered)"
@@ -620,7 +1011,7 @@ with tab1:
         
         st.markdown("---")
     with tabs[4]:
-        st.subheader('Album Type Distribution')
+        st.subheader('📀 Album Type Distribution')
         
         # Calculate total counts for each unique value in the `album_type` column for the filtered data
         album_type_counts_filtered = filtered_df['album_type'].value_counts()
@@ -694,7 +1085,7 @@ with tab1:
         
         st.markdown('---')
     with tabs[5]:
-        st.subheader('Track Duration Insights')
+        st.subheader('🎼 Track Duration Insights')
     
         # Calculate duration_min and duration_category
         filtered_df['duration_min'] = filtered_df['duration_ms'] / 60000
@@ -715,10 +1106,14 @@ with tab1:
     
         # Count plot (bar chart)
         if not filtered_df.empty:
+            bar_data = duration_counts_filtered.reset_index()
+            bar_data.columns = ["Duration Category", "Tracks"]
+            
             fig_countplot = px.bar(
-                filtered_df,
-                x="duration_category",
-                color="duration_category",
+                bar_data,
+                x="Duration Category",
+                y="Tracks",
+                color="Duration Category",
                 color_discrete_sequence=px.colors.qualitative.G10,
                 title="Count Plot of Duration Categories (Filtered)"
             )
@@ -737,12 +1132,12 @@ with tab1:
         # Pie chart
         if not duration_counts_filtered.empty:
             pie_data = duration_counts_filtered.reset_index()
-            pie_data.columns = ["Duration Category", "Count"]
+            pie_data.columns = ["Duration Category", "Tracks"]
     
             fig_duration_pie = px.pie(
                 pie_data,
                 names="Duration Category",
-                values="Count",
+                values="Tracks",
                 color="Duration Category",
                 color_discrete_sequence=px.colors.qualitative.Pastel,
                 title="Overall Distribution of Track Duration Categories (Filtered)"
@@ -776,12 +1171,14 @@ with tab1:
     
             if not duration_popularity_distribution_filtered.empty:
                 bar_data = duration_popularity_distribution_filtered.reset_index().melt(
-                    id_vars="popularity_bucket", var_name="Duration Category", value_name="Count"
+                    id_vars="popularity_bucket", var_name="Duration Category", value_name="Tracks"
                 )
+                bar_data.rename(columns={"popularity_bucket": "Popularity Bucket"}, inplace=True)
+                
                 fig_pop_duration = px.bar(
                     bar_data,
-                    x="popularity_bucket",
-                    y="Count",
+                    x="Popularity Bucket",
+                    y="Tracks",
                     color="Duration Category",
                     barmode="stack",
                     color_discrete_sequence=px.colors.sequential.Aggrnyl_r,
@@ -796,8 +1193,6 @@ with tab1:
     
                 with st.expander("ℹ️ More Information"):
                     st.info("This stacked bar chart illustrates how short-form and long-form tracks are distributed across different popularity levels (quartiles).")
-            else:
-                st.warning("No data available to visualize track duration distribution across popularity buckets for the selected filters.")
         else:
             st.warning("Cannot analyze track duration across popularity buckets. Ensure 'popularity' column is available and data is not empty.")
     
@@ -1191,6 +1586,10 @@ with tab1:
                 st.metric("Preference", "Balanced Format")
     
         st.divider()
+        if is_any_filter_different:
+            st.toast("🔍 Peek Into Enhanced View Of Snapshot With Trends")
+        else:
+            st.toast("🖼️ View The Scenery In Gallery Of Metric Cards")
         
     with tabs[7]:
         st.subheader("📊 Key Insights and Findings")
@@ -1264,7 +1663,7 @@ with tab1:
                     st.info(f"**Highest Pair:** {filtered_highest_collab[0][0]} & {filtered_highest_collab[0][1]} ({filtered_highest_collab[1]} collaborations)")
                 if is_any_filter_different:
                     with colB:
-                        st.info(f"[**Market Reference:** {full_highest_collab[0][0]} & {full_highest_collab[0][1]} ({full_highest_collab[1]} collaborations)]") # type: ignore
+                        st.info(f"**Market Reference:** {full_highest_collab[0][0]} & {full_highest_collab[0][1]} ({full_highest_collab[1]} collaborations)") # type: ignore
                     if filtered_highest_collab[1] > full_highest_collab[1]:
                         st.success("This pair is more dominant in the current selection → Strong collaborative synergy.")
                     elif filtered_highest_collab[1] < full_highest_collab[1]:
@@ -1379,6 +1778,10 @@ with tab1:
                 st.info("Baseline UK duration preferences shown.")
         
         st.markdown('---')
+        if is_any_filter_different:
+            st.toast("🔀 Explore The Comparisons Of Structural Analysis For Filtered V/S Baseline Version ")
+        else:
+            st.toast("📊 Findings & Insights Are Ready For Baseline Version")
     with tabs[8]:
         # Strategic Insights
         st.markdown("### 📌 Strategic Insights")
@@ -1455,443 +1858,15 @@ with tab1:
             st.success("*Together, these dynamics suggest a mature, stable UK market where innovation happens within predictable frameworks — ideal for benchmarking and long-term planning.*")
         
         st.markdown("---")
-
-# --- 1. Initial Data Loading and Preprocessing ---
-print("Dashboard created successfully with basic Streamlit structure. Please wait for some time (about 3-4 mins) to get the advanced Streamlit structure with recommendations & conclusion.")
-print("--- Starting Data Preparation and Model Training For Recommendational Analysis ---")
-
-# Re-initialize df from the original CSV and perform initial preprocessing
-# Save the full dataset first
-df_merged_original = df_merged.copy()
-df = filtered_df.copy() # Use the already filtered data for consistency with the dashboard filters
-df['artist'] = df['artist'].str.lower().str.strip()
-df['artist'] = df['artist'].astype(str).apply(lambda x: [a.strip() for a in x.split('&')])
-df = df.explode('artist')
-
-# Re-create track_collaborations DataFrame
-track_collaborations = df.groupby(['date', 'song', 'position']).agg(
-    num_artists=('artist', 'nunique')
-).reset_index()
-track_collaborations['is_collaboration'] = track_collaborations['num_artists'] > 1
-
-track_collaborations['rank_group'] = track_collaborations['position'].apply(assign_rank_group)
-
-# Re-create df_merged with all necessary columns
-df_merged = pd.merge(df, track_collaborations[['date', 'song', 'position', 'is_collaboration', 'num_artists', 'rank_group']],
-                on=['date', 'song', 'position'], how='left')
-
-# Add duration_min
-df_merged['duration_min'] = df_merged['duration_ms'] / 60000
-
-# Add duration_category
-df_merged['duration_category'] = df_merged['duration_min'].apply(lambda x: 'short-form' if x < 3.5 else 'long-form')
-
-# Add popularity_bucket
-df_merged['popularity_bucket'] = pd.qcut(df_merged['popularity'], q=4, labels=['Q1 (Least Popular)', 'Q2', 'Q3', 'Q4 (Most Popular)'], duplicates='drop')
-
-print("df_merged and its derived columns have been successfully re-created.")
-
-# --- 2. Feature Engineering ---
-# Convert 'date' to datetime objects
-df_merged['date'] = pd.to_datetime(df_merged['date'], dayfirst=True)
-
-# Extract day of the week (0=Monday, 6=Sunday) and month
-df_merged['day_of_week'] = df_merged['date'].dt.dayofweek
-df_merged['month'] = df_merged['date'].dt.month
-
-# Create interaction feature: duration_x_num_artists
-df_merged['duration_x_num_artists'] = df_merged['duration_min'] * df_merged['num_artists']
-
-# Create explicit_duration interaction feature
-df_merged['explicit_duration'] = df_merged['is_explicit'] * df_merged['duration_min']
-
-print("Engineered features 'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration' created.")
-
-# --- 3.0 Predictive Modeling for Chart Success (No Engineering Features) ---
-# Model 1: Logistic Regression
-# Define the target variable: Chart Success (Top 10 vs. not Top 10)
-df_merged['chart_success'] = (df_merged['position'] <= 10).astype(int)
-
-# Select features for Logistic Regression
-features_lr = ['duration_min', 'num_artists', 'is_explicit']
-categorical_features_lr = ['album_type', 'duration_category']
-df_temp_lr = df_merged[features_lr + categorical_features_lr].copy()
-
-try: 
-    X_lr = pd.get_dummies(df_temp_lr, columns=categorical_features_lr, drop_first=True)
-    y_lr = df_merged['chart_success']
-    
-    X_train_no_eng, X_test_no_eng, y_train_no_eng, y_test_no_eng = train_test_split(X_lr, y_lr, test_size=0.2, random_state=42, stratify=y_lr)
-    
-    # Helper function for metrics
-    def get_metrics(y_true, y_pred, model_name):
-        acc = accuracy_score(y_true, y_pred)
-        metrics_df = pd.DataFrame(classification_report(y_true, y_pred, output_dict=True)).transpose()
-        metrics_df = metrics_df.drop(labels=['accuracy','macro avg','weighted avg'])
-        metrics_df.rename(index={'0':'Class 0 (Not Top 10)','1':'Class 1 (Top 10)'}, inplace=True)
-        return acc, metrics_df
-    
-    model_lr = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
-    model_lr.fit(X_train_no_eng, y_train_no_eng)
-    y_pred_lr = model_lr.predict(X_test_no_eng)
-    lr_accuracy_no_eng, metrics_df = get_metrics(y_test_no_eng, y_pred_lr, "Logistic Regression (No Features)")
-    
-    # --- Module 2: Linear Regression ---
-    linear_model_no_eng = LinearRegression()
-    linear_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
-    linear_y_pred_no_eng = linear_model_no_eng.predict(X_test_no_eng)
-    Lr_accuracy_no_eng = accuracy_score(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int))
-    Lr_metrics_df_no_eng = pd.DataFrame(classification_report(y_test_no_eng, (linear_y_pred_no_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
-    Lr_metrics_df_no_eng = Lr_metrics_df_no_eng.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-    Lr_metrics_df_no_eng.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-    
-    # --- Model 3: Random Forest (No Engineered Features) ---
-    # Use the same feature set as Logistic Regression for comparison without engineered features
-    rf_model_no_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-    rf_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
-    rf_y_pred_no_eng = rf_model_no_eng.predict(X_test_no_eng)
-    rf_accuracy_no_eng, rf_metrics_df_no_eng = get_metrics(y_test_no_eng, rf_y_pred_no_eng, "Random Forest (No Features)")
-    
-    # --- Model 4: XGBoost (No Engineered Features) ---
-    xgb_model_no_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
-        scale_pos_weight=(len(y_train_no_eng) - y_train_no_eng.sum()) / y_train_no_eng.sum()) # Handle class imbalance
-    xgb_model_no_eng.fit(X_train_no_eng, y_train_no_eng)
-    xgb_y_pred_no_eng = xgb_model_no_eng.predict(X_test_no_eng)
-    xgb_accuracy_no_eng, xgb_metrics_df_no_eng = get_metrics(y_test_no_eng, xgb_y_pred_no_eng, "XGBoost (No Features)")
-    
-    # --- Model 5: K-Means Clustering ---
-    kmeans_no_eng = KMeans(n_clusters=2, random_state=42)
-    kmeans_no_eng.fit(X_train_no_eng)
-    kmeans_labels_no_eng = kmeans_no_eng.predict(X_test_no_eng)
-    kmeans_accuracy_no_eng, kmeans_metrics_df_no_eng = get_metrics(y_test_no_eng, kmeans_labels_no_eng, "KMeans (No Features)")
-    
-    # --- Model 6: SVM ---
-    svm_no_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
-    svm_no_eng.fit(X_train_no_eng, y_train_no_eng)
-    svm_y_pred_no_eng = svm_no_eng.predict(X_test_no_eng)
-    svm_accuracy_no_eng, svm_metrics_df_no_eng = get_metrics(y_test_no_eng, svm_y_pred_no_eng, "SVM (No Features)")
-    
-    # --- Model 7: Gradient Boosting ---
-    gb_no_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
-    gb_no_eng.fit(X_train_no_eng, y_train_no_eng)
-    gb_y_pred_no_eng = gb_no_eng.predict(X_test_no_eng)
-    gb_accuracy_no_eng, gb_metrics_df_no_eng = get_metrics(y_test_no_eng, gb_y_pred_no_eng, "Gradient Boosting (No Features)")
-    
-    # --- Model 8: Gaussian Mixture ---
-    gmm_no_eng = GaussianMixture(n_components=2, random_state=42)
-    gmm_no_eng.fit(X_train_no_eng)
-    gmm_labels_no_eng = gmm_no_eng.predict(X_test_no_eng)
-    gmm_accuracy_no_eng, gmm_metrics_df_no_eng = get_metrics(y_test_no_eng, gmm_labels_no_eng, "Gaussian Mixture (No Features)")
-    
-    # --- 3.1 Predictive Modeling For Chart Success (With Engineered Features) ---
-    features_engineered_rf = [
-        'duration_min', 'num_artists', 'is_explicit',
-        'day_of_week', 'month', 'duration_x_num_artists', 'explicit_duration'
-    ]
-    categorical_features_rf_eng = ['album_type', 'duration_category']
-    
-    df_temp_engineered_rf = df_merged[features_engineered_rf + categorical_features_rf_eng].copy()
-    X_engineered_rf = pd.get_dummies(df_temp_engineered_rf, columns=categorical_features_rf_eng, drop_first=True)
-    y_engineered_rf = df_merged['chart_success']
-    
-    X_train_eng, X_test_eng, y_train_eng, y_test_eng = train_test_split(X_engineered_rf, y_engineered_rf, test_size=0.2, random_state=42, stratify=y_engineered_rf)
-    
-    # --- Model 1: Logistic Regression ---
-    lr_model_eng = LogisticRegression(random_state=42, solver='liblinear', class_weight='balanced')
-    lr_model_eng.fit(X_train_eng, y_train_eng)
-    lr_y_pred_eng = lr_model_eng.predict(X_test_eng)
-    lr_accuracy_eng, lr_metrics_eng_df = get_metrics(y_test_eng, lr_y_pred_eng, "Logistic Regression (Engineered Features)")
-    
-    # --- Model 2: Linear Regression ---
-    Lr_model_eng = LinearRegression()
-    Lr_model_eng.fit(X_train_eng, y_train_eng)
-    Lr_y_pred_eng = Lr_model_eng.predict(X_test_eng)
-    Lr_accuracy_eng = accuracy_score(y_test_eng, (Lr_y_pred_eng> 0.5).astype(int))
-    Lr_metrics_eng_df = pd.DataFrame(classification_report(y_test_eng, (Lr_y_pred_eng > 0.5).astype(int), zero_division=0, output_dict=True)).transpose()
-    Lr_metrics_eng_df = Lr_metrics_eng_df.drop(labels=['accuracy', 'macro avg', 'weighted avg'])
-    Lr_metrics_eng_df.rename(index={'0': 'Class 0 (Not Top 10)', '1': 'Class 1 (Top 10)'}, inplace=True)
-    
-    # --- Model 3: Random Forest ---
-    rf_model_eng = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-    rf_model_eng.fit(X_train_eng, y_train_eng)
-    rf_y_pred_eng = rf_model_eng.predict(X_test_eng)
-    rf_accuracy_eng, rf_metrics_eng_df = get_metrics(y_test_eng, rf_y_pred_eng, "Random Forest (Engineered Features)")
-    
-    # --- Model 4: XGBoost ---
-    xgb_model_eng = XGBClassifier(n_estimators=100, random_state=42, eval_metric='logloss', 
-        scale_pos_weight=(len(y_train_eng) - y_train_eng.sum()) / y_train_eng.sum()) # Handle class imbalance
-    xgb_model_eng.fit(X_train_eng, y_train_eng)
-    xgb_y_pred_eng = xgb_model_eng.predict(X_test_eng)
-    xgb_accuracy_eng, xgb_metrics_eng_df = get_metrics(y_test_eng, xgb_y_pred_eng, "XGBoost (Engineered Features)")
-    
-    # --- Model 5: KMeans --- 
-    kmeans_eng = KMeans(n_clusters=2, random_state=42)
-    kmeans_eng.fit(X_train_eng)
-    kmeans_labels_eng = kmeans_eng.predict(X_test_eng)
-    kmeans_accuracy_eng, kmeans_metrics_df_eng = get_metrics(y_test_eng, kmeans_labels_eng, "KMeans (Engineered Features)")
-    
-    # --- Model 6: SVM --- 
-    svm_eng = SVC(kernel='rbf', class_weight='balanced', random_state=42)
-    svm_eng.fit(X_train_eng, y_train_eng)
-    svm_y_pred_eng = svm_eng.predict(X_test_eng)
-    svm_accuracy_eng, svm_metrics_df_eng = get_metrics(y_test_eng, svm_y_pred_eng, "SVM (Engineered Features)")
-    
-    # --- Model 7: Gradient Boosting --- 
-    gb_eng = GradientBoostingClassifier(n_estimators=100, random_state=42)
-    gb_eng.fit(X_train_eng, y_train_eng)
-    gb_y_pred_eng = gb_eng.predict(X_test_eng)
-    gb_accuracy_eng, gb_metrics_df_eng = get_metrics(y_test_eng, gb_y_pred_eng, "Gradient Boosting (Engineered Features)")
-    
-    # --- Model 8: Gaussian Mixture --- 
-    gmm_eng = GaussianMixture(n_components=2, random_state=42)
-    gmm_eng.fit(X_train_eng)
-    gmm_labels_eng = gmm_eng.predict(X_test_eng)
-    gmm_accuracy_eng, gmm_metrics_df_eng = get_metrics(y_test_eng, gmm_labels_eng, "Gaussian Mixture (Engineered Features)")
-    
-    # --- 3.3 Model Comparison DataFrames for All Models ---
-    def build_comparison_df(metrics_no_eng_df, metrics_eng_df, model_name):
-        comparison_data = []
-        metrics_no_eng_dict = metrics_no_eng_df.to_dict('index')
-        metrics_eng_dict = metrics_eng_df.to_dict('index')
-    
-        for class_name_key in metrics_no_eng_dict:
-            metrics = metrics_no_eng_dict[class_name_key]
-            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-            comparison_data.append({'Model': f'{model_name} (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-    
-        for class_name_key in metrics_eng_dict:
-            metrics = metrics_eng_dict[class_name_key]
-            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-            comparison_data.append({'Model': f'{model_name} (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-    
-        return pd.DataFrame(comparison_data)
-    
-    # Build comparison DataFrames for each model
-    lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
-    linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
-    rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
-    xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_eng_df, "XGBoost")
-    kmeans_comparison_df = build_comparison_df(kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, "KMeans")
-    svm_comparison_df = build_comparison_df(svm_metrics_df_no_eng, svm_metrics_df_eng, "SVM")
-    gb_comparison_df = build_comparison_df(gb_metrics_df_no_eng, gb_metrics_df_eng, "Gradient Boosting")
-    gmm_comparison_df = build_comparison_df(gmm_metrics_df_no_eng, gmm_metrics_df_eng, "Gaussian Mixture")
-    
-    # Combine all into one master comparison DataFrame
-    all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
-                                        kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
-    
-    # Create comparison_df for plotting RF performance with/without engineered features
-    comparison_data = []
-    
-    rf_metrics_no_eng_dict = rf_metrics_df_no_eng.to_dict('index')
-    rf_metrics_with_eng_dict = rf_metrics_eng_df.to_dict('index')
-    
-    for class_name_key in rf_metrics_no_eng_dict:
-        metrics = rf_metrics_no_eng_dict[class_name_key]
-        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-    
-    for class_name_key in rf_metrics_with_eng_dict:
-        metrics = rf_metrics_with_eng_dict[class_name_key]
-        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-    
-    comparison_df = pd.DataFrame(comparison_data)
-    
-    # --- 3.4 Model Accuracy Comparison DataFrames to find best model ---
-    # Create a DataFrame for the summary table
-    accuracy_summary_df = pd.DataFrame({
-        'Model': [
-            'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
-            'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
-            'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)', 'KMeans (No Features)', 'KMeans (Engineered Features)',
-            'SVM (No Features)', 'SVM (Engineered Features)', 'Gradient Boosting (No Features)', 'Gradient Boosting (Engineered Features)',
-            'Gaussian Mixture (No Features)', 'Gaussian Mixture (Engineered Features)'
-        ],
-        'Accuracy': [
-            lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng,
-            kmeans_accuracy_no_eng, kmeans_accuracy_eng, svm_accuracy_no_eng, svm_accuracy_eng, gb_accuracy_no_eng, gb_accuracy_eng, gmm_accuracy_no_eng, gmm_accuracy_eng
-        ]
-    })
-    if "accuracy_summary_df_original" not in st.session_state:
-        if not is_any_filter_different:
-            st.session_state["accuracy_summary_df_original"] = accuracy_summary_df
-
-except Exception as e:   
-    print(f"Error during model training and comparison: {e}")
-    st.warning("Not enough data for models to perform testing. Please adjust your filters to include more data.")
-    
-# --- 4. Time Series Data (`unique_artists_per_day`) (from Section II, needed for dashboard) ---
-unique_artists_per_day = filtered_df.groupby('date')['artist'].nunique()
-# --- Save baseline unique artists per day once ---
-if "baseline_unique_artists_per_day" not in st.session_state:
-    st.session_state["baseline_unique_artists_per_day"] = (
-        df_merged.groupby('date')['artist'].nunique()
-    )
-print("Unique artists per day calculated for Time Series Analysis.")
-
-# --- 5. Genre Prediction Function and Application (from Section XV) ---
-# Conceptual definition of major genres
-from huggingface_hub import login
-# Try Streamlit secrets first
-hf_token = st.secrets.get("HF_TOKEN")
-
-if hf_token:
-    try:
-        login(token=hf_token)
-    except Exception as e:
-        st.warning(f"⚠️ Hugging Face token found but login failed: {e}")
-else:
-    st.warning("⚠️ Hugging Face token not found. Please set HF_TOKEN in secrets.toml or .env")
-
-major_genres = ['Pop', 'Rock', 'Hip-Hop/Rap', 'Jazz', 'Country',
-                'Classical', 'Dance', 'R&B/soul', 'Electronic/EDM', 'Folk',
-                'Metal', 'Blues', 'Reggae', 'Instrumental', 'Indie',
-                'Gospel', 'Punk', 'Latin', 'Afrobeats', 'World Music']
-# Load CLIP model from openai
-model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-
-def predict_genre_from_image_ai_conceptual(image_url):
-    """
-    Predict genre from album cover URL using CLIP zero-shot classification.
-    Always returns one of the major_genres.
-    """
-    if pd.isna(image_url) or not isinstance(image_url, str) or not image_url.startswith('http'):
-        return 'Unknown'
-    try:
-        response = requests.get(image_url, timeout=5)
-        response.raise_for_status()
-        image = Image.open(io.BytesIO(response.content)).convert("RGB")
-
-        # Compare image against all genre prompts
-        # inputs = processor(text=major_genres, images=image, return_tensors="pt", padding=True)
-        text_inputs = processor.tokenizer(
-            major_genres,
-            padding=True,
-            return_tensors="pt"
-        )
-        image_inputs = processor.image_processor(
-            images=image,
-            return_tensors="pt"
-        )
-
-        inputs = {
-            **text_inputs,
-            **image_inputs
-        }
-        
-        with torch.no_grad():
-            outputs = model(**inputs)
-            logits_per_image = outputs.logits_per_image
-            probs = logits_per_image.softmax(dim=1)
-
-        predicted_idx = probs.argmax(-1).item()
-        return major_genres[predicted_idx]
-    except Exception:
-        return "Unknown"
-
-# --- Initialize or reuse genre mapping in Streamlit session state ---
-if "genre_mapping" not in st.session_state:
-    st.session_state["genre_mapping"] = {}
-
-@st.cache_data(show_spinner=False)
-def build_genre_mapping(unique_urls, existing_mapping):
-    """
-    Predict genres only for new album cover URLs not already in mapping.
-    Shows a Streamlit progress bar with percentage in the UI,
-    and a tqdm progress bar in the console logs.
-    """
-    mapping = dict(existing_mapping)
-    progress_bar = st.progress(0)
-    progress_text_success = st.empty()
-    progress_text_info = st.empty()
-    total = len(unique_urls)
-
-    # tqdm progress bar in console
-    for i, url in enumerate(tqdm(unique_urls, desc="Genre prediction progress", unit="track")):
-        if url not in mapping:  # only predict if not already cached
-            mapping[url] = predict_genre_from_image_ai_conceptual(url)
-
-        percent_complete = int(((i + 1) / total) * 100)
-
-        with tab2:
-            # Update Streamlit UI
-            progress_text_success.success(f"✅ In Progress: {percent_complete}%")
-            progress_bar.progress((i + 1) / total)
-            progress_text_info.info("⏳ Wait for about 2–3 minutes while we prepare your recommendational analysis tab.")
-
-    # Clear progress bar and text after completion
-    progress_bar.empty()
-    progress_text_success.empty()
-    progress_text_info.empty()
-
-    # Optional: show completion message in UI
-    print("✅ Genre prediction complete!")
-
-    return mapping
-
-# --- Build or update mapping based on current filters ---
-unique_album_covers = df_merged['album_cover_url'].dropna().unique().tolist()
-st.session_state["genre_mapping"] = build_genre_mapping( unique_album_covers, st.session_state["genre_mapping"]) # type: ignore
-
-# Apply to full dataset
-df_merged['genre'] = df_merged['album_cover_url'].map(st.session_state["genre_mapping"])
-print("Conceptual AI-driven genre prediction function defined.\nGenre Prediction is in progress and may take some time (2-3 minutes)")
-
-# --- Genre Filter (20 major genres) ---
-with st.spinner("⏳ Loading genre filter... this may take a few minutes"):
-    selected_genres = st.sidebar.multiselect(
-        'Genre',
-        options=major_genres,
-        default=major_genres
-    )
-
-if selected_genres and 'genre' in df_merged.columns:
-    mask &= df_merged['genre'].isin(selected_genres)
-
-# --- When creating filtered_df, inherit the genre column directly using mask ---
-filtered_df = df_merged.loc[mask].copy()
-print("Genre prediction applied to your filtered dataset.")
-
-is_genre_filter_different = (set(selected_genres) != set(major_genres))
-is_any_filter_different = (
-    is_date_range_different or is_artist_filter_different or is_track_type_different or is_album_type_different 
-    or is_duration_filter_different or is_popularity_filter_different or is_genre_filter_different
-)
-    
-baseline_total = len(unique_album_covers)
-current_total = len(filtered_df['album_cover_url'].dropna().unique())
-delta = current_total - baseline_total
-
-if delta >= 0:
-    delta_str = f"⬆️ +{delta}"
-else:
-    delta_str = f"⬇️ {delta}"
-
-# --- Sidebar caption with arrows ---
-with st.sidebar:
-    if is_any_filter_different:
-        st.caption(f"🎵 Total Songs: {current_total} ({delta_str})")
-    else:
-        st.caption(f"🎵 Total Songs: {baseline_total}")
-
-# --- 5.1 Genre-Specific Analysis DataFrames (from Section XVI) ---
-genre_popularity_stats = filtered_df.groupby('genre')['popularity'].agg(['mean', 'median', 'std']).sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
-genre_explicitness_percentage = filtered_df.groupby('genre')['is_explicit'].mean() * 100
-genre_duration_stats = filtered_df.groupby('genre')['duration_min'].agg(['mean', 'median', 'std']).sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
-print("✅ Genre-specific statistics calculated.")
-
-print("--- All required dataframes and variables are now prepared. ---")
+        if is_any_filter_different:
+            st.toast("Morals Of Structural Analysis Are Affected....")
+        else:
+            st.toast("Morals Of Structural Analysis Are Waiting....")
 
 with tab2:
     st.balloons()
     # --- Dashboard Title and Introduction ---
-    st.title("Recommendational Analysis Dashboard For UK Music Market Listeners")
+    st.title("Recommendational Analysis Dashboard For UK's Music Listeners")
     st.markdown("""
     This dashboard presents key insights and recommendations from the UK's Music Market Analysis,
     leveraging our data validation, descriptive analysis, and predictive modeling capabilities.
@@ -1906,7 +1881,7 @@ with tab2:
         "📌 Conclusion"
     ])
     with tabs[0]:
-        st.subheader("**Predictive Modeling of Chart Success**")
+        st.subheader("🤖 Predictive Modeling of Chart Success")
         st.markdown("""
         Explore how different models perform in predicting Top 10 chart success.
         Use the filter below to select a model and view its performance metrics.
@@ -2006,6 +1981,11 @@ with tab2:
             ))
         
             st.plotly_chart(fig_comp, width='stretch')
+            if is_any_filter_different:
+                st.toast(f"🔀 {model_choice}'s Visualizations Are Ready")
+            else:
+                st.toast("📌 Logistic Regression & Other 7 Model Predictions Are Lined In Queue")
+            
         else:
             st.warning("Comparison DataFrame not found. Please ensure the model comparison section was run.")
         
@@ -2151,14 +2131,14 @@ with tab2:
             st.session_state["baseline_explicit_duration"] = df_merged[['explicit_duration','chart_success']]
     
         # --- Section 2: Feature Engineering Visualizations (Relevant to Chart Success) ---
-        st.subheader("Feature Engineering Visualizations for Chart Success")
+        st.subheader("🛠️ Feature Engineering Visualizations for Chart Success")
         st.markdown("""
         Visualizations of engineered features provide insights into their relationship with chart success.
         """)
     
         # --- Chart Success by Day of the Week ---
         fig_day_of_week = px.histogram(
-            df_merged,
+            filtered_df,
             x="day_of_week",
             color="chart_success",
             barmode="group",
@@ -2182,8 +2162,9 @@ with tab2:
             st.info("- Weekly patterns may reflect audience engagement cycles and promotional strategies in UK music consumption.")
     
         # --- Interaction of Duration and Number of Artists vs. Popularity ---
+        st.subheader("🎼 Rhythm of Success Plot")
         fig_duration_x_artists = px.scatter(
-            df_merged,
+            filtered_df,
             x="duration_x_num_artists",
             y="popularity",
             color="chart_success",
@@ -2203,7 +2184,7 @@ with tab2:
     
         # --- Distribution of Explicit Track Duration by Chart Success ---
         fig_explicit_duration = px.violin(
-            df_merged,
+            filtered_df,
             x="chart_success",
             y="explicit_duration",
             color="chart_success",
@@ -2228,14 +2209,14 @@ with tab2:
         st.markdown('---')
     with tabs[2]:
         # --- Recommendation 3: Time Series Analysis of Trends ---
-        st.subheader("**Time Series Analysis of Trends**")
+        st.subheader("🕰️ Time Series Analysis of Trends")
         st.markdown("""
         Analyzing trends over time can reveal seasonality, shifts in artist dominance, or changes in content preferences.
         Here's a look at the number of unique artists appearing in the Top 50 chart each day.
         """)
     
         if 'unique_artists_per_day' in locals():
-            st.write("**Daily Unique Artists in Top 50:**")
+            st.write("### Daily Unique Artists in Top 50:")
     
             # Prepare dataframe
             unique_artists_per_day_df = unique_artists_per_day.reset_index()
@@ -2269,19 +2250,24 @@ with tab2:
     
         st.markdown('---')
         
+        if is_any_filter_different:
+            st.toast("🎶 Deep Dive Into Feature Engineering Of The Music Market")
+        else:
+            st.toast("✨ Look The Engineering Features Of The Music Market")
+        
     with tabs[3]:
         # --- Recommendation 4: Genre-Specific Analysis ---
-        st.subheader("Genre-Specific Analysis (Conceptual)")
+        st.subheader("📚 Genre-Specific Analysis (Conceptual)")
         st.markdown("""
         While genre prediction is currently conceptual (using CLIPModel & CLIPProcessor from OpenAI) and sensitive in nature,
         we can explore how different genres might relate to popularity, explicitness, and duration.
         """)
     
         # --- Genre vs. Popularity ---
-        if 'genre_popularity_stats' in locals() and not df_merged.empty:
-            st.write("**Genre vs. Popularity:**")
+        if 'genre_popularity_stats' in locals() and not filtered_df.empty:
+            st.write("### Genre vs. Popularity:")
             fig_genre_pop = px.box(
-                df_merged,
+                filtered_df,
                 x="genre", y="popularity", color="genre",
                 category_orders={"genre": genre_popularity_stats.index.tolist()},
                 labels={"genre":"Genre","popularity":"Popularity Score"},
@@ -2308,8 +2294,8 @@ with tab2:
             st.warning("`genre_popularity_stats` or `df_merged` not found. Please ensure the genre analysis section was run.")
     
         # --- Genre vs. Explicitness ---
-        if 'genre_explicitness_percentage' in locals() and not df_merged.empty:
-            st.write("**Genre vs. Explicitness:**")
+        if 'genre_explicitness_percentage' in locals() and not filtered_df.empty:
+            st.write("### Genre vs. Explicitness:")
             fig_genre_exp = px.bar(
                 x=genre_explicitness_percentage.index,
                 y=genre_explicitness_percentage.values,
@@ -2337,10 +2323,10 @@ with tab2:
             st.warning("`genre_explicitness_percentage` or `df_merged` not found. Please ensure the genre analysis section was run.")
     
         # --- Genre vs. Duration ---
-        if 'genre_duration_stats' in locals() and not df_merged.empty:
-            st.write("**Genre vs. Duration:**")
+        if 'genre_duration_stats' in locals() and not filtered_df.empty:
+            st.write("### Genre vs. Duration:")
             fig_genre_dur = px.box(
-                df_merged,
+                filtered_df,
                 x="genre", y="duration_min", color="genre",
                 category_orders={"genre": genre_duration_stats.index.tolist()},
                 labels={"genre":"Genre","duration_min":"Duration (minutes)"},
@@ -2367,9 +2353,9 @@ with tab2:
     
         # --- 3D Multivariate Analysis ---
         st.subheader("🎶 Genre Multivariate Analysis (3D)")
-        genre_popularity_median = df_merged.groupby('genre')['popularity'].median()
-        genre_duration_median = df_merged.groupby('genre')['duration_min'].median()
-        genre_explicitness_percentage = df_merged.groupby('genre')['is_explicit'].mean() * 100
+        genre_popularity_median = filtered_df.groupby('genre')['popularity'].median()
+        genre_duration_median = filtered_df.groupby('genre')['duration_min'].median()
+        genre_explicitness_percentage = filtered_df.groupby('genre')['is_explicit'].mean() * 100
     
         genre_3d_df = pd.DataFrame({
             'Genre': genre_popularity_median.index,
@@ -2439,18 +2425,24 @@ with tab2:
     
         st.markdown("---")
         
+        if is_any_filter_different:
+            st.toast("🔍 Deep Dive Into Genre Comparisons — Filtered V/S Baseline")
+        else:
+            st.toast("💡 Genre Visualizations Are Ready For Baseline View")
+        
+        
     with tabs[4]:
         # --- Recommendation 5: Multivariate Analysis ---
-        st.subheader("Multivariate Analysis (3D Scatter Plot)")
+        st.subheader("🧮 Multivariate Analysis (3D Scatter Plot)")
         st.markdown("""
         This 3D scatter plot visualizes the interplay between track duration, number of artists, and popularity,
         with points colored by chart success and distinguished by duration category (short-form vs. long-form).
         """)
     
-        if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min','num_artists','popularity','chart_success','duration_category']):
+        if not filtered_df.empty and all(col in filtered_df.columns for col in ['duration_min','num_artists','popularity','chart_success','duration_category']):
             # Interactive Plotly 3D scatter
             fig_3d_scatter = px.scatter_3d(
-                df_merged,
+                filtered_df,
                 x="duration_min",
                 y="num_artists",
                 z="popularity",
@@ -2514,7 +2506,12 @@ with tab2:
             st.warning("Required data for 3D scatter plot not found. Please ensure the multivariate analysis section was run.")
     
         st.markdown('---')
-
+        
+        if is_any_filter_different:
+            st.toast("🔗 Deep Dive Into All-In-One Relationships")
+        else:
+            st.toast("🧠 All-In-One Plot Ready For Baseline View")
+        
     with tabs[5]:
         st.subheader("📌 Conclusion")
         st.markdown("""
@@ -2640,7 +2637,7 @@ with tab2:
             return corr_df[["Variable 1", "Variable 2", "Correlation"]]
         
         # --- Multivariate Insight ---
-        if not df_merged.empty and all(col in df_merged.columns for col in ['duration_min','num_artists','popularity','chart_success']):
+        if not filtered_df.empty and all(col in filtered_df.columns for col in ['duration_min','num_artists','popularity','chart_success']):
             st.markdown("#### 🔮 Multivariate Insights")
         
             if is_any_filter_different:
@@ -2779,6 +2776,11 @@ with tab2:
             st.success("✅ The dashboard is useful for Atlantic Recording Corporation to identify UK listener preference indicators, collaboration strengths, and content composition trends in real time.")
             
         st.divider()
+        if is_any_filter_different:
+            st.toast("🎤 Final Note — Filtered Insights Concluded With Harmony")
+        else:
+            st.toast("🏁 Key Takeaways Sealed - Baseline Conclusion Ready - Good Luck For Further Journey")
+        
         st.markdown(
             """
             <div style='text-align: center; color: grey; font-size: 14px;'>
@@ -2795,7 +2797,7 @@ with tab2:
                 <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./" target="_blank">
                     📂 GitHub Repository
                 </a><br>
-                <a href="https://colab.research.google.com/drive/1wShHaDKU3pblh1OQSz8dYRumc3JCK46l?usp=sharing" target="_blank">
+                <a href="https://prathamesh666.github.io/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./Research%20Paper.html" target="_blank">
                     📑 Research Paper
                 </a>
                 
