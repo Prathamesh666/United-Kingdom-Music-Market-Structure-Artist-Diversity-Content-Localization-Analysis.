@@ -395,7 +395,7 @@ except Exception as e:
 # --- Genre Prediction Function and Application  ---
 from huggingface_hub import login
 # Try Streamlit secrets first
-hf_token = "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"
+hf_token = st.secrets.get("HF_TOKEN")
 
 if hf_token:
     try:
@@ -1866,7 +1866,7 @@ with tab1:
 with tab2:
     st.balloons()
     # --- Dashboard Title and Introduction ---
-    st.title("Recommendational Analysis Dashboard For UK's Music Listeners")
+    st.title("Recommendational Analysis Dashboard For UK Music Market Listeners")
     st.markdown("""
     This dashboard presents key insights and recommendations from the UK's Music Market Analysis,
     leveraging our data validation, descriptive analysis, and predictive modeling capabilities.
