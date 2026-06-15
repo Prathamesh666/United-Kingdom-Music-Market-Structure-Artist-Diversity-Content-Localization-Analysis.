@@ -1866,7 +1866,7 @@ with tab1:
 with tab2:
     st.balloons()
     # --- Dashboard Title and Introduction ---
-    st.title("Recommendational Analysis Dashboard For UK Music Market Listeners")
+    st.title("Recommendational Analysis Dashboard For UK's Music Listeners")
     st.markdown("""
     This dashboard presents key insights and recommendations from the UK's Music Market Analysis,
     leveraging our data validation, descriptive analysis, and predictive modeling capabilities.
