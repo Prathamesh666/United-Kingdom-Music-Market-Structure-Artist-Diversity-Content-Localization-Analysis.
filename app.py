@@ -2010,6 +2010,7 @@ with tab2:
         else:
             st.warning("`accuracy_summary_df` not found. Please ensure the model accuracy summary section was run.")
         
+        st.subheader("🎼 Rhythm of Success Plot")
         # --- Your Plotly figure construction code ---
         metric_types_to_plot = ['F1-score', 'Precision', 'Recall']
         metric_color_map = {'F1-score': 'yellow', 'Precision': 'red', 'Recall': 'green'}
@@ -2162,7 +2163,6 @@ with tab2:
             st.info("- Weekly patterns may reflect audience engagement cycles and promotional strategies in UK music consumption.")
     
         # --- Interaction of Duration and Number of Artists vs. Popularity ---
-        st.subheader("🎼 Rhythm of Success Plot")
         fig_duration_x_artists = px.scatter(
             filtered_df,
             x="duration_x_num_artists",
