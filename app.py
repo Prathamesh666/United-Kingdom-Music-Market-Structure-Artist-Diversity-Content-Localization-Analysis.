@@ -380,7 +380,7 @@ with tab1:
     ])
     with tabs[0]:
         st.subheader("📋 Filtered Dataset Preview")
-        st.dataframe(filtered_df.head())
+        st.dataframe(filtered_df)
         
         st.markdown('---')
     with tabs[1]:
