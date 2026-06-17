@@ -3,8 +3,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
-from tqdm.auto import tqdm # For progress_apply
-import torch, requests, io, warnings
+import torch, requests, io
 
 def message():
     st.error("Please reload the application and allow 3–4 minutes (6-7 minutes if your internet speed is slow i.e below 40 MBPS) for the dashboard to fully initialize the Baseline Market. Avoid changing sidebar filters during this process.")

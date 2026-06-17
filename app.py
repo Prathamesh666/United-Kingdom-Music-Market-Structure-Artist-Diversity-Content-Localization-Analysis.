@@ -17,10 +17,8 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.mixture import GaussianMixture
-from transformers import CLIPProcessor, CLIPModel
-from PIL import Image
 from tqdm.auto import tqdm # For progress_apply
-import torch, requests, io, warnings
+import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
 
@@ -247,7 +245,7 @@ except:
 # Conceptual definition of major genres
 from huggingface_hub import login
 # Try Streamlit secrets first
-hf_token = "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" #st.secrets.get("HF_TOKEN")
+hf_token = "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" #st.secrets.get("HF_TOKEN")
 
 if hf_token:
     try:
@@ -284,7 +282,7 @@ def build_genre_mapping(unique_urls, existing_mapping):
 
         percent_complete = int(((i + 1) / total) * 100)
         # Update Streamlit UI
-        progress_text_success.success(f"✅ In Progress: {percent_complete}%")
+        progress_text_success.success(f"✅ Genre Prediction In Progress: {percent_complete}%")
         progress_bar.progress((i + 1) / total)
         progress_text_info.info("⏳ Wait for about 3–4 minutes while we prepare your analysis tabs.")
 
@@ -1566,7 +1564,6 @@ with tab1:
         else:
             st.toast("Morals Of Structural Analysis Are Waiting....")
 
-
 # --- 1. Initial Data Loading and Preprocessing ---
 print("Dashboard created successfully with basic Streamlit structure. Please wait for some time (about 3-4 mins) to get the advanced Streamlit structure with recommendations & conclusion.")
 print("--- Starting Data Preparation and Model Training For Recommendational Analysis ---")
@@ -2219,7 +2216,7 @@ with tab2:
             fig_genre_pop = px.box(
                 filtered_df,
                 x="genre", y="popularity", color="genre",
-                category_orders={"genre": genre_popularity_stats.index.tolist()},
+                category_orders={"genre": sorted(genre_popularity_stats.index.tolist())},
                 labels={"genre":"Genre","popularity":"Popularity Score"},
                 title="Popularity Distribution by Genre"
             )
@@ -2239,7 +2236,7 @@ with tab2:
                 with st.expander("ℹ️ More Information"):
                     st.info(f"- **{top_genre}** leads in popularity (median {top_pop:.1f}), while **{bottom_genre}** ranks lowest (median {bottom_pop:.1f}).")
                     st.info("- Popularity variations by genre may stem from cultural trends, marketing strategies, or demographic preferences in the UK.")
-                    
+            
         else:
             st.warning("`genre_popularity_stats` or `df_merged` not found. Please ensure the genre analysis section was run.")
     
@@ -2269,6 +2266,7 @@ with tab2:
                 with st.expander("ℹ️ More Information"):
                     st.info(f"- **{most_explicit_genre}** has the highest explicitness ({most_explicit_pct:.1f}%), while **{least_explicit_genre}** is lowest ({least_explicit_pct:.1f}%).")
                     st.info("- Explicitness differences highlight genre-specific cultural norms and target audience demographics in UK music.")
+                
         else:
             st.warning("`genre_explicitness_percentage` or `df_merged` not found. Please ensure the genre analysis section was run.")
     
@@ -2278,7 +2276,7 @@ with tab2:
             fig_genre_dur = px.box(
                 filtered_df,
                 x="genre", y="duration_min", color="genre",
-                category_orders={"genre": genre_duration_stats.index.tolist()},
+                category_orders={"genre": sorted(genre_duration_stats.index.tolist())},
                 labels={"genre":"Genre","duration_min":"Duration (minutes)"},
                 title="Track Duration Distribution by Genre"
             )
@@ -2298,6 +2296,7 @@ with tab2:
                 with st.expander("ℹ️ More Information"):
                     st.info(f"- **{longest_genre}** has longer tracks (median {longest_dur:.2f} min), while **{shortest_genre}** favors shorter tracks (median {shortest_dur:.2f} min).")
                     st.info("- Duration preferences by genre may reflect traditional formats, audience attention spans, or production styles in UK music culture.")
+            
         else:
             st.warning("`genre_duration_stats` or `df_merged` not found. Please ensure the genre analysis section was run.")
     
@@ -2634,7 +2633,7 @@ with tab2:
             st.warning("Please reload the website and wait for the OpenAI Model to predict and calculate Genre Specific Statistics for the baseline metrics. Then select any required custom filter option to see the conclusion.")
         else:
             st.markdown("#### 🎵 Genre Insights")
-        
+            
             # --- Genre Popularity ---
             with st.expander("🎶 **Genre Popularity Insights**"):
                 overall_pop_stats = st.session_state["baseline_genre_popularity_stats"]
@@ -2643,7 +2642,29 @@ with tab2:
                     .agg(["mean", "median", "std"])
                     .sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
                 )
-        
+                summary_df = pd.DataFrame({
+                    "Metric": ["Mean Popularity", "Median Popularity", " Popularity Variability (Std Dev)"],
+                    "Overall Top 3": [
+                        ", ".join(overall_pop_stats.sort_values(by='mean', ascending=False).head(3).index),
+                        ", ".join(overall_pop_stats.sort_values(by='median', ascending=False).head(3).index),
+                        ", ".join(overall_pop_stats.sort_values(by='std', ascending=False).head(3).index)
+                    ],
+                    "Overall Bottom 3": [
+                        ", ".join(overall_pop_stats.sort_values(by='mean').head(3).index),
+                        ", ".join(overall_pop_stats.sort_values(by='median').head(3).index),
+                        ", ".join(overall_pop_stats.sort_values(by='std').head(3).index)
+                    ],
+                    "Filtered Top 3": [
+                        ", ".join(filtered_pop_stats.sort_values(by='mean', ascending=False).head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_pop_stats.sort_values(by='median', ascending=False).head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_pop_stats.sort_values(by='std', ascending=False).head(3).index) if is_any_filter_different else "-"
+                    ],
+                    "Filtered Bottom 3": [
+                        ", ".join(filtered_pop_stats.sort_values(by='mean').head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_pop_stats.sort_values(by='median').head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_pop_stats.sort_values(by='std').head(3).index) if is_any_filter_different else "-"
+                    ]
+                })
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.info(f"Overall Top 3 Genres (Mean): **{', '.join(overall_pop_stats.sort_values(by='mean', ascending=False).head(3).index)}**")
@@ -2663,7 +2684,10 @@ with tab2:
                     if is_any_filter_different:
                         st.success(f"Filtered Top 3 Genres (Std Dev): **{', '.join(filtered_pop_stats.sort_values(by='std', ascending=False).head(3).index)}**")
                         st.warning(f"Filtered Bottom 3 Genres (Std Dev): **{', '.join(filtered_pop_stats.sort_values(by='std').head(3).index)}**")
-        
+            
+                with st.expander("Table Form"):
+                    st.dataframe(summary_df, width='stretch', hide_index=True)
+            
             # --- Genre Explicitness ---
             with st.expander("⚡ **Genre Explicitness Insights**"):
                 overall_exp_stats = st.session_state["baseline_genre_explicitness_stats"]
@@ -2672,7 +2696,29 @@ with tab2:
                     .agg(["mean", "median", "std"])
                     .sort_values(by=["mean", "median", "std"], ascending=[False, False, False]) * 100
                 )
-        
+                summary_exp_df = pd.DataFrame({
+                    "Metric": ["Mean Explicitness (%)", "Median Explicitness (%)", "Explicitness Variability (Std Dev of %)"],
+                    "Overall Top 3": [
+                        ", ".join(overall_exp_stats.sort_values(by='mean', ascending=False).head(3).index),
+                        ", ".join(overall_exp_stats.sort_values(by='median', ascending=False).head(3).index),
+                        ", ".join(overall_exp_stats.sort_values(by='std', ascending=False).head(3).index)
+                    ],
+                    "Overall Bottom 3": [
+                        ", ".join(overall_exp_stats.sort_values(by='mean').head(3).index),
+                        ", ".join(overall_exp_stats.sort_values(by='median').head(3).index),
+                        ", ".join(overall_exp_stats.sort_values(by='std').head(3).index)
+                    ],
+                    "Filtered Top 3": [
+                        ", ".join(filtered_exp_stats.sort_values(by='mean', ascending=False).head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_exp_stats.sort_values(by='median', ascending=False).head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_exp_stats.sort_values(by='std', ascending=False).head(3).index) if is_any_filter_different else "-"
+                    ],
+                    "Filtered Bottom 3": [
+                        ", ".join(filtered_exp_stats.sort_values(by='mean').head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_exp_stats.sort_values(by='median').head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_exp_stats.sort_values(by='std').head(3).index) if is_any_filter_different else "-"
+                    ]
+                })
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.info(f"Overall Top 3 Genres (Mean Explicitness): {', '.join(overall_exp_stats.sort_values(by='mean', ascending=False).head(3).index)}")
@@ -2692,7 +2738,10 @@ with tab2:
                     if is_any_filter_different:
                         st.success(f"Filtered Top 3 Genres (Std Dev Explicitness): {', '.join(filtered_exp_stats.sort_values(by='std', ascending=False).head(3).index)}")
                         st.warning(f"Filtered Bottom 3 Genres (Std Dev Explicitness): {', '.join(filtered_exp_stats.sort_values(by='std').head(3).index)}")
-        
+            
+                with st.expander("Table Form"):
+                    st.dataframe(summary_exp_df, width='stretch', hide_index=True)
+                
             # --- Genre Duration --- 
             with st.expander("⏳ **Genre Duration Insights**"):
                 overall_dur_stats = st.session_state["baseline_genre_duration_stats"]
@@ -2701,7 +2750,29 @@ with tab2:
                     .agg(["mean", "median", "std"])
                     .sort_values(by=["mean", "median", "std"], ascending=[False, False, False])
                 )
-        
+                summary_dur_df = pd.DataFrame({
+                    "Metric": ["Mean Duration (m)", "Median Duration (m)", "Duration Variability (Std Dev in minutes)"],
+                    "Overall Top 3": [
+                        ", ".join(overall_dur_stats.sort_values(by='mean', ascending=False).head(3).index),
+                        ", ".join(overall_dur_stats.sort_values(by='median', ascending=False).head(3).index),
+                        ", ".join(overall_dur_stats.sort_values(by='std', ascending=False).head(3).index)
+                    ],
+                    "Overall Bottom 3": [
+                        ", ".join(overall_dur_stats.sort_values(by='mean').head(3).index),
+                        ", ".join(overall_dur_stats.sort_values(by='median').head(3).index),
+                        ", ".join(overall_dur_stats.sort_values(by='std').head(3).index)
+                    ],
+                    "Filtered Top 3": [
+                        ", ".join(filtered_dur_stats.sort_values(by='mean', ascending=False).head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_dur_stats.sort_values(by='median', ascending=False).head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_dur_stats.sort_values(by='std', ascending=False).head(3).index) if is_any_filter_different else "-"
+                    ],
+                    "Filtered Bottom 3": [
+                        ", ".join(filtered_dur_stats.sort_values(by='mean').head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_dur_stats.sort_values(by='median').head(3).index) if is_any_filter_different else "-",
+                        ", ".join(filtered_dur_stats.sort_values(by='std').head(3).index) if is_any_filter_different else "-"
+                    ]
+                })
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.info(f"Overall Top 3 Genres (Mean Duration): {', '.join(overall_dur_stats.sort_values(by='mean', ascending=False).head(3).index)}")
@@ -2721,7 +2792,8 @@ with tab2:
                     if is_any_filter_different:
                         st.success(f"Filtered Top 3 Genres (Std Dev Duration): {', '.join(filtered_dur_stats.sort_values(by='std', ascending=False).head(3).index)}")
                         st.warning(f"Filtered Bottom 3 Genres (Std Dev Duration): {', '.join(filtered_dur_stats.sort_values(by='std').head(3).index)}")
-        
+                with st.expander("Table Form"):
+                    st.dataframe(summary_dur_df, width='stretch', hide_index=True)
             st.info("This project provides both structural and cultural intelligence into the UK music market by comparing the current filter view with the full dataset baseline. Recommendations balance the selected subset with the overall UK market context.")
             st.success("✅ The dashboard is useful for Atlantic Recording Corporation to identify UK listener preference indicators, collaboration strengths, and content composition trends in real time.")
             
@@ -2737,12 +2809,12 @@ with tab2:
                 🎵 In the rhythm of data, the melody takes flight,  
                 <br>this dashboard turns numbers into <b>insightful light</b>.  
                 <br>Like chart-topping tracks that find their beat,  
-                <br>strategies here make the UK market complete.  
+                <br>lyrics here make the UK's music listeners complete.  
                 <br>
                 <br>From artistry’s spark to audience’s embrace,  
                 <br>we harmonize trends in a balanced space.  
                 <br>So let the metrics sing, let the <b>visuals rhyme</b>,  
-                <br>guiding the industry in tempo and time. 🎶<br><hr>
+                <br>guiding the chemistry of industry in <b>intangibility of time</b>. 🎶<br><hr>
                 🔖 Created & Powered by <b>Prathamesh Bhurke</b><br>
                 <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./" target="_blank">
                     📂 GitHub Repository
