@@ -2814,7 +2814,7 @@ with tab2:
                 <br>From artistry’s spark to audience’s embrace,  
                 <br>we harmonize trends in a balanced space.  
                 <br>So let the metrics sing, let the <b>visuals rhyme</b>,  
-                <br>guiding the chemistry of industry in <b>intangibility of time</b>. 🎶<br><hr>
+                <br>guiding the industry in <b>intangibility of time</b>. 🎶<br><hr>
                 🔖 Created & Powered by <b>Prathamesh Bhurke</b><br>
                 <a href="https://github.com/Prathamesh666/United-Kingdom-Music-Market-Structure-Artist-Diversity-Content-Localization-Analysis./" target="_blank">
                     📂 GitHub Repository
