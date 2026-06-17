@@ -245,7 +245,7 @@ except:
 # Conceptual definition of major genres
 from huggingface_hub import login
 # Try Streamlit secrets first
-hf_token = "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" #st.secrets.get("HF_TOKEN")
+hf_token = st.secrets.get("HF_TOKEN")
 
 if hf_token:
     try:
