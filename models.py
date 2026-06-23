@@ -198,27 +198,38 @@ def get_token(code: str):
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
     }
-    st.info(f"Using code: {code}")
-    st.info(f"Using redirect_uri: {REDIRECT_URI}")
-    
     response = requests.post(url, data=payload)
     st.info(f"Token response: {response.json()}")  # Debugging
     return response.json()
 
-# Get current user ID
-def get_spotify_user_id(token: str) -> str:
+# Refresh access token using refresh_token
+def refresh_access_token(refresh_token: str):
+    url = "https://accounts.spotify.com/api/token"
+    payload = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+    }
+    response = requests.post(url, data=payload)
+    data = response.json()
+    st.info(f"Refresh response: {data}")  # Debugging
+    return data
+
+# Get current user info (id + product type)
+def get_spotify_user_info(token: str):
     url = "https://api.spotify.com/v1/me"
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        return response.json()["id"]
+        return response.json()
     else:
-        st.error(f"Failed to fetch user ID: {response.text}")
-        return "None"
+        st.error(f"Failed to fetch user info: {response.text}")
+        return None
 
-# Create playlist
+# Create playlist (modern endpoint)
 def create_spotify_playlist(token, name="UK Dashboard Playlist"):
-    url = "https://api.spotify.com/v1/me/playlists" # f"https://api.spotify.com/v1/users/{user_id}/playlists"
+    url = "https://api.spotify.com/v1/me/playlists"
     payload = {"name": name, "description": "Generated from Streamlit dashboard", "public": False}
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.post(url, json=payload, headers=headers)
@@ -245,13 +256,9 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
             st.error(f"Failed to add tracks: {response.json()}")
             return response.json()
         else:
-            # Update progress bar and text
             percent_complete = int((batch_idx / num_batches) * 100)
             progress_bar.progress(percent_complete)
-            progress_text.text(
-                f"Uploading batch {batch_idx}/{num_batches} "
-                f"({len(chunk)} tracks)..."
-            )
+            progress_text.text(f"Uploading batch {batch_idx}/{num_batches} ({len(chunk)} tracks)...")
 
     progress_bar.progress(100)
     progress_text.text("✅ All tracks uploaded successfully!")
@@ -277,7 +284,6 @@ def create_playlist_from_dataframe(unique_songs):
             )
             return
 
-        # Exchange code only once
         code = query_params["code"]
         tokens = get_token(code)
         access_token = tokens.get("access_token")
@@ -287,35 +293,42 @@ def create_playlist_from_dataframe(unique_songs):
             st.error(f"Failed to get access token: {tokens}")
             return
 
-        # Save tokens in session state
         st.session_state["access_token"] = access_token
         st.session_state["refresh_token"] = refresh_token
 
-    # Step 2: Use stored token
+    # Step 2: Ensure token is valid (refresh if needed)
     access_token = st.session_state["access_token"]
+    test_response = requests.get("https://api.spotify.com/v1/me", headers={"Authorization": f"Bearer {access_token}"})
+    if test_response.status_code == 401:
+        refresh_token = st.session_state.get("refresh_token")
+        if refresh_token:
+            new_tokens = refresh_access_token(refresh_token)
+            if "access_token" in new_tokens:
+                st.session_state["access_token"] = new_tokens["access_token"]
+                access_token = new_tokens["access_token"]
 
     # Step 3: Playlist creation button
     if st.button("🎶 Create Playlist from Unique Songs"):
         progress_bar = st.progress(0)
         progress_text = st.empty()
 
-        # Get user ID
-        progress_text.text("📀 Step 1/3: Fetching user ID...")
-        user_id = get_spotify_user_id(access_token)
+        # Get user info
+        progress_text.text("📀 Step 1/3: Fetching user info...")
+        user_info = get_spotify_user_info(access_token)
         progress_bar.progress(20)
-        if not user_id:
+        if not user_info:
             return
 
         # Create playlist
         progress_text.text("🎶 Step 2/3: Creating playlist...")
-        playlist = create_spotify_playlist(user_id, access_token)
+        playlist = create_spotify_playlist(access_token)
         progress_bar.progress(40)
         if "id" not in playlist:
             st.error(f"Failed to create playlist: {playlist}")
             return
         playlist_id = playlist["id"]
 
-        # Add tracks in batches
+        # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         track_uris = []
         total = len(unique_songs)
@@ -332,12 +345,11 @@ def create_playlist_from_dataframe(unique_songs):
         progress_bar.progress(100)
         progress_text.text("✅ Playlist created successfully!")
         st.success("Playlist created successfully!")
-        
-        # Fetch user info again to confirm owner
-        user_info = get_spotify_user_id(access_token)
-        if user_info:
-            st.markdown(f"👤 Playlist owner: **{user_info}**")
-        
+
+        # Show owner info
+        st.markdown(f"👤 Playlist owner: **{user_info.get('display_name', user_info.get('id'))}**")
+        st.markdown(f"💡 Account type: **{user_info.get('product', 'Unknown')}**")
+
         st.markdown(
             f"""
             <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
