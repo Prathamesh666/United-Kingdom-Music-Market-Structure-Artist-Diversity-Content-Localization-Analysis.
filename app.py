@@ -403,49 +403,51 @@ with tab3:
     
     song, artist = selected.split(" — ")
 
-    # Spotify setup
-    token = get_spotify_token_cached()
-    headers = {"Authorization": f"Bearer {token}"}
-    result = search_spotify_track(song, artist, headers)
-    print(result)
-
-    if result is not None:
-        track_id, preview_url = result
-
-        # Two-column layout for Spotify + YouTube
-        col_audio, col_video = st.columns([1,2.25])
-
-        with col_audio:
-            try:
+    # Two-column layout for Spotify + YouTube
+    col_audio, col_video = st.columns([1,2.25])
+    with col_audio:
+        st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
+    with col_video:
+        api_key = st.secrets.get("Api_Key")
+        if api_key:
+            video_id = get_youtube_video_id(song, artist, api_key)
+            if video_id:
+                st.video(f"https://www.youtube.com/watch?v={video_id}")
+            else:
+                st.warning("No official video found.")
+        else:
+            st.warning("YouTube API key not configured.")
+            
+    create_playlist_from_dataframe(unique_songs)
+            
+    try:
+        # Spotify setup
+        token = get_spotify_token_cached()
+        headers = {"Authorization": f"Bearer {token}"}
+        result = search_spotify_track(song, artist, headers)
+            
+        if result is not None:
+            track_id, preview_url = result
+    
+            with col_audio:
                 if track_id:
                     spotify_embed = f"""
                     <iframe src="https://open.spotify.com/embed/track/{track_id}" 
                     width="100%" height="100%" frameborder="0" allowtransparency="true" 
                     allow="encrypted-media"></iframe>
                     """
-                    st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
                     st.iframe(spotify_embed)
                 elif preview_url:
-                    st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
                     st.audio(preview_url, format="audio/mp3")
-            except:
-                st.warning("Try again later: Bad Luck")
-        with col_video:
-            api_key = st.secrets.get("Api_Key")
-            if api_key:
-                video_id = get_youtube_video_id(song, artist, api_key)
-                if video_id:
-                    st.video(f"https://www.youtube.com/watch?v={video_id}")
-                else:
-                    st.warning("No official video found.")
-            else:
-                st.warning("YouTube API key not configured.")
-        st.divider()
-        # Banner
-        st.image("static/Livestream_banner.png")
+    except:
+        st.warning("Try again later: Bad Luck")
         
-        st.subheader("📀 Create a Spotify Playlist")
-        create_playlist_from_dataframe(unique_songs)
+    st.divider()
+    # Banner
+    st.image("static/Livestream_banner.png")
+    
+    st.subheader("📀 Create a Spotify Playlist")
+    #create_playlist_from_dataframe(unique_songs)
     
 with tab1:
     st.balloons()
