@@ -198,6 +198,9 @@ def get_token(code: str):
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
     }
+    st.info(f"Using code: {code}")
+    st.info(f"Using redirect_uri: {REDIRECT_URI}")
+    
     response = requests.post(url, data=payload)
     st.info(f"Token response: {response.json()}")  # Debugging
     return response.json()
