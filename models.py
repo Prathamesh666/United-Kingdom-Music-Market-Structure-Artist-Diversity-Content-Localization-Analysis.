@@ -124,9 +124,8 @@ def predict_genre_from_image_ai_conceptual(image_url):
         return "Unknown"
     
 # Spotify credentials (replace with your own)
-CLIENT_ID = "9f5f22e29b7044d3960635ec40067401"
-CLIENT_SECRET = "6fefac9243674acfbd7fef4a1aca7f6a"
-
+CLIENT_ID = st.secrets.get("Client_ID")
+CLIENT_SECRET = st.secrets.get("Client_Secret")
 # Get Spotify access token
 def get_spotify_token():
     auth_url = "https://accounts.spotify.com/api/token"
