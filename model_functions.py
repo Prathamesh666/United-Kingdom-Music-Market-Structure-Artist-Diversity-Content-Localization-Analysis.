@@ -354,19 +354,6 @@ def create_playlist_from_dataframe(unique_songs):
             percent_complete = 40 + int(60 * (i+1)/total)
             progress_bar.progress(percent_complete)
             progress_text.text(f"Searching track {i+1}/{total}...")
-            
-        st.write("Access token:", access_token)
-        st.write("Scopes:", st.session_state.get("scope"))
-        # Ensure token is valid before adding tracks
-        access_token = st.session_state["access_token"]
-        test_response = requests.get("https://api.spotify.com/v1/me", headers={"Authorization": f"Bearer {access_token}"})
-        if test_response.status_code == 401:
-            refresh_token = st.session_state.get("refresh_token")
-            if refresh_token:
-                new_tokens = refresh_access_token(refresh_token)
-                if "access_token" in new_tokens:
-                    st.session_state["access_token"] = new_tokens["access_token"]
-                    access_token = new_tokens["access_token"]
         
         # finally add tracks
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
