@@ -5,7 +5,7 @@ import itertools, collections
 import networkx as nx
 import plotly.graph_objects as go
 import plotly.express as px
-from models import *
+from model_functions import *
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
@@ -380,7 +380,6 @@ with tab3:
         })
         .reset_index()
     )
-    print(len(unique_songs))
 
     # Search bar
     query = st.text_input("🔍 Search for a song or artist")
@@ -405,9 +404,10 @@ with tab3:
     song, artist = selected.split(" — ")
 
     # Spotify setup
-    token = get_spotify_token()
+    token = get_spotify_token_cached()
     headers = {"Authorization": f"Bearer {token}"}
     result = search_spotify_track(song, artist, headers)
+    print(result)
 
     if result is not None:
         track_id, preview_url = result
@@ -416,18 +416,20 @@ with tab3:
         col_audio, col_video = st.columns([1,2.25])
 
         with col_audio:
-            if track_id:
-                spotify_embed = f"""
-                <iframe src="https://open.spotify.com/embed/track/{track_id}" 
-                width="100%" height="100%" frameborder="0" allowtransparency="true" 
-                allow="encrypted-media"></iframe>
-                """
-                st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
-                st.iframe(spotify_embed)
-            elif preview_url:
-                st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
-                st.audio(preview_url, format="audio/mp3")
-
+            try:
+                if track_id:
+                    spotify_embed = f"""
+                    <iframe src="https://open.spotify.com/embed/track/{track_id}" 
+                    width="100%" height="100%" frameborder="0" allowtransparency="true" 
+                    allow="encrypted-media"></iframe>
+                    """
+                    st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
+                    st.iframe(spotify_embed)
+                elif preview_url:
+                    st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
+                    st.audio(preview_url, format="audio/mp3")
+            except:
+                st.warning("Try again later: Bad Luck")
         with col_video:
             api_key = st.secrets.get("Api_Key")
             if api_key:

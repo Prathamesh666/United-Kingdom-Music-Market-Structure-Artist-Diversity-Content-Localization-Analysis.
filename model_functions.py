@@ -126,6 +126,11 @@ def predict_genre_from_image_ai_conceptual(image_url):
 # Spotify credentials (replace with your own)
 CLIENT_ID = st.secrets.get("Client_ID")
 CLIENT_SECRET = st.secrets.get("Client_Secret")
+import time
+@st.cache_data(ttl=3600)
+def get_spotify_token_cached():
+    return get_spotify_token()
+
 # Get Spotify access token
 def get_spotify_token():
     auth_url = "https://accounts.spotify.com/api/token"
@@ -136,18 +141,18 @@ def get_spotify_token():
     })
     return auth_response.json()["access_token"]
 
-token = get_spotify_token()
-headers = {"Authorization": f"Bearer {token}"}
-
 def search_spotify_track(song, artist, headers):
     query = urllib.parse.quote(f"{song} {artist}")
     url = f"https://api.spotify.com/v1/search?q={query}&type=track&limit=1"
     response = requests.get(url, headers=headers)
-
+    if response.status_code == 429:
+        retry_after = int(response.headers.get("Retry-After", 5))
+        st.warning(f"Rate limit hit. Retrying after {retry_after} seconds...")
+        time.sleep(retry_after)
+        response = requests.get(url, headers=headers)
     if response.status_code != 200:
         print("Spotify API error:", response.status_code, response.text)
         return None
-
     try:
         results = response.json()
     except ValueError:
