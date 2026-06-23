@@ -249,7 +249,8 @@ def create_playlist_from_dataframe(unique_songs):
         )
         return
 
-    code = query_params["code"][0]
+    code = query_params["code"]
+    st.info(f"Using code: {code}")
     tokens = get_token(code)
     access_token = tokens.get("access_token")
     if not access_token:
