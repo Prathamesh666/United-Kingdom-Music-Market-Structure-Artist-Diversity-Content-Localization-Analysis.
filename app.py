@@ -428,12 +428,15 @@ with tab3:
                 st.audio(preview_url, format="audio/mp3")
 
         with col_video:
-            api_key = "AIzaSyDEWfdhR2DizbxfklqGOl2g_EVVro5cnws"
-            video_id = get_youtube_video_id(song, artist, api_key)
-            if video_id:
-                st.video(f"https://www.youtube.com/watch?v={video_id}")
+            api_key = st.secrets.get("Api_Key")
+            if api_key:
+                video_id = get_youtube_video_id(song, artist, api_key)
+                if video_id:
+                    st.video(f"https://www.youtube.com/watch?v={video_id}")
+                else:
+                    st.warning("No official video found.")
             else:
-                st.warning("No official video found.")
+                st.warning("YouTube API key not configured.")
         st.divider()
         # Banner
         st.image("static/Livestream_banner.png")
