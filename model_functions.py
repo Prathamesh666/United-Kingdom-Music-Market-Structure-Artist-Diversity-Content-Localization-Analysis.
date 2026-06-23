@@ -339,15 +339,22 @@ def create_playlist_from_dataframe(unique_songs):
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         track_uris = []
         total = len(unique_songs)
+        
         for i, (_, row) in enumerate(unique_songs.iterrows()):
-            track_id = search_spotify_track(
+            result = search_spotify_track(
                 row["song"], row["artist"],
                 {"Authorization": f"Bearer {access_token}"}
             )
-            if track_id:
-                track_uris.append(f"spotify:track:{track_id}")
-            progress_bar.progress(40 + int(60 * (i+1)/total))
-
+            if result:
+                track_id, preview_url = result
+                if track_id:  # only append if we got a valid track_id
+                    track_uris.append(f"spotify:track:{track_id}")
+        
+            # update progress bar gradually
+            percent_complete = 40 + int(60 * (i+1)/total)
+            progress_bar.progress(percent_complete)
+            progress_text.text(f"Searching track {i+1}/{total}...")
+            
         st.write("Access token:", access_token)
         st.write("Scopes:", st.session_state.get("scope"))
         # Ensure token is valid before adding tracks
@@ -361,8 +368,9 @@ def create_playlist_from_dataframe(unique_songs):
                     st.session_state["access_token"] = new_tokens["access_token"]
                     access_token = new_tokens["access_token"]
         
-        # Now add tracks with the refreshed token
+        # finally add tracks
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
+        # Now add tracks with the refreshed token
         progress_bar.progress(100)
         progress_text.text("✅ Playlist created successfully!")
         st.success("Playlist created successfully!")
