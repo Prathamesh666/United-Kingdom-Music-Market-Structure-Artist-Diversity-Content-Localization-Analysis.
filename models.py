@@ -230,7 +230,6 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
 
 # Main helper
 def create_playlist_from_dataframe(unique_songs):
-    # Use st.query_params instead of experimental_get_query_params
     query_params = st.query_params
     if "code" not in query_params:
         auth_url = (
@@ -258,23 +257,43 @@ def create_playlist_from_dataframe(unique_songs):
         return
 
     if st.button("🎶 Create Playlist from Unique Songs"):
+        # Initialize progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        # Step 1: Create playlist
+        status_text.text("Creating playlist...")
         playlist = create_spotify_playlist(user_id, access_token)
+        progress_bar.progress(20)
+
         if "id" not in playlist:
             st.error(f"Failed to create playlist: {playlist}")
             return
 
         playlist_id = playlist["id"]
 
+        # Step 2: Collect track URIs
+        status_text.text("Collecting tracks...")
         track_uris = []
-        for _, row in unique_songs.iterrows():
-            track_id = search_spotify_track(row["song"], row["artist"], {"Authorization": f"Bearer {access_token}"})
+        total = len(unique_songs)
+        for i, (_, row) in enumerate(unique_songs.iterrows()):
+            track_id = search_spotify_track(
+                row["song"], row["artist"],
+                {"Authorization": f"Bearer {access_token}"}
+            )
             if track_id:
                 track_uris.append(f"spotify:track:{track_id}")
+            # Update progress bar proportionally
+            progress_bar.progress(20 + int(60 * (i+1)/total))
 
+        # Step 3: Add tracks
+        status_text.text("Adding tracks to playlist...")
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
+        progress_bar.progress(100)
 
+        # Done
+        status_text.text("✅ Playlist created successfully!")
         st.success("Playlist created successfully!")
-        st.markdown(f"[🎧 Open Playlist in Spotify](https://open.spotify.com/playlist/{playlist_id})")
         st.markdown(
             f"""
             <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
@@ -294,4 +313,3 @@ def create_playlist_from_dataframe(unique_songs):
             """,
             unsafe_allow_html=True
         )
-        

@@ -440,8 +440,7 @@ with tab3:
         st.image("static/Livestream_banner.png")
         
         st.subheader("📀 Create a Spotify Playlist")
-        if st.button("🎶 Create Playlist from Unique Songs"):
-            create_playlist_from_dataframe(unique_songs)
+        create_playlist_from_dataframe(unique_songs)
     
 with tab1:
     st.balloons()
