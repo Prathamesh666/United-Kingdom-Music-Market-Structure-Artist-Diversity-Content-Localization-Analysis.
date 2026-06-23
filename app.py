@@ -397,6 +397,7 @@ with tab3:
 
     # Dropdown
     choices = filtered.sort_values(by="song").apply(lambda r: f"{r['song']} — {r['artist']}", axis=1)
+    st.success(f"Total Songs: {len(choices)}")
     selected = st.selectbox("🎶 Choose a song to play:", choices)   
     # Find the row for the selected song
     row = filtered[filtered.apply(lambda r: f"{r['song']} — {r['artist']}", axis=1) == selected].iloc[0]
