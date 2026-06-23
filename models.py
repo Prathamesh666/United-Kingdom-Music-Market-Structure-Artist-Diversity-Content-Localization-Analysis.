@@ -288,6 +288,7 @@ def create_playlist_from_dataframe(unique_songs):
         tokens = get_token(code)
         access_token = tokens.get("access_token")
         refresh_token = tokens.get("refresh_token")
+        scope = tokens.get("scope") 
 
         if not access_token:
             st.error(f"Failed to get access token: {tokens}")
@@ -295,6 +296,7 @@ def create_playlist_from_dataframe(unique_songs):
 
         st.session_state["access_token"] = access_token
         st.session_state["refresh_token"] = refresh_token
+        st.session_state["scope"] = scope
 
     # Step 2: Ensure token is valid (refresh if needed)
     access_token = st.session_state["access_token"]
@@ -341,6 +343,20 @@ def create_playlist_from_dataframe(unique_songs):
                 track_uris.append(f"spotify:track:{track_id}")
             progress_bar.progress(40 + int(60 * (i+1)/total))
 
+        st.write("Access token:", access_token)
+        st.write("Scopes:", st.session_state.get("scope"))
+        # Ensure token is valid before adding tracks
+        access_token = st.session_state["access_token"]
+        test_response = requests.get("https://api.spotify.com/v1/me", headers={"Authorization": f"Bearer {access_token}"})
+        if test_response.status_code == 401:
+            refresh_token = st.session_state.get("refresh_token")
+            if refresh_token:
+                new_tokens = refresh_access_token(refresh_token)
+                if "access_token" in new_tokens:
+                    st.session_state["access_token"] = new_tokens["access_token"]
+                    access_token = new_tokens["access_token"]
+        
+        # Now add tracks with the refreshed token
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
         progress_bar.progress(100)
         progress_text.text("✅ Playlist created successfully!")
