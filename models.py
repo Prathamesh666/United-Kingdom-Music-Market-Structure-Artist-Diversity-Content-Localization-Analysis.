@@ -257,12 +257,12 @@ def create_playlist_from_dataframe(unique_songs):
         return
 
     if st.button("🎶 Create Playlist from Unique Songs"):
-        # Initialize progress bar
+        # Initialize progress bar and text
         progress_bar = st.progress(0)
-        status_text = st.empty()
+        progress_text = st.empty()
 
         # Step 1: Create playlist
-        status_text.text("Creating playlist...")
+        progress_text.text("📀 Step 1/3: Creating playlist...")
         playlist = create_spotify_playlist(user_id, access_token)
         progress_bar.progress(20)
 
@@ -273,7 +273,7 @@ def create_playlist_from_dataframe(unique_songs):
         playlist_id = playlist["id"]
 
         # Step 2: Collect track URIs
-        status_text.text("Collecting tracks...")
+        progress_text.text("🎶 Step 2/3: Collecting tracks...")
         track_uris = []
         total = len(unique_songs)
         for i, (_, row) in enumerate(unique_songs.iterrows()):
@@ -287,12 +287,12 @@ def create_playlist_from_dataframe(unique_songs):
             progress_bar.progress(20 + int(60 * (i+1)/total))
 
         # Step 3: Add tracks
-        status_text.text("Adding tracks to playlist...")
+        progress_text.text("⏳ Step 3/3: Adding tracks to playlist...")
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
         progress_bar.progress(100)
 
         # Done
-        status_text.text("✅ Playlist created successfully!")
+        progress_text.text("✅ Playlist created successfully!")
         st.success("Playlist created successfully!")
         st.markdown(
             f"""
