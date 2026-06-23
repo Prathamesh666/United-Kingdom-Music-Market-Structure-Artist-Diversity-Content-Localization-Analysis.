@@ -235,50 +235,63 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
 # Main helper
 def create_playlist_from_dataframe(unique_songs):
     query_params = st.query_params
-    if "code" not in query_params:
-        auth_url = (
-            f"https://accounts.spotify.com/authorize"
-            f"?client_id={CLIENT_ID}"
-            f"&response_type=code"
-            f"&redirect_uri={REDIRECT_URI}"
-            f"&scope=playlist-modify-private playlist-modify-public"
-        )
-        st.markdown(
-            f'<a href="{auth_url}" target="_blank">🔑 Login with Spotify</a>',
-            unsafe_allow_html=True
-        )
-        return
 
-    code = query_params["code"]
-    st.info(f"Using code: {code}")
-    tokens = get_token(code)
-    access_token = tokens.get("access_token")
-    if not access_token:
-        st.error(f"Failed to get access token: {tokens}")
-        return
+    # Step 1: Handle login
+    if "access_token" not in st.session_state:
+        if "code" not in query_params:
+            auth_url = (
+                f"https://accounts.spotify.com/authorize"
+                f"?client_id={CLIENT_ID}"
+                f"&response_type=code"
+                f"&redirect_uri={REDIRECT_URI}"
+                f"&scope=playlist-modify-private playlist-modify-public"
+            )
+            st.markdown(
+                f'<a href="{auth_url}" target="_blank">🔑 Login with Spotify</a>',
+                unsafe_allow_html=True
+            )
+            return
 
-    user_id = get_spotify_user_id(access_token)
-    if not user_id:
-        return
+        # Exchange code only once
+        code = query_params["code"]
+        tokens = get_token(code)
+        access_token = tokens.get("access_token")
+        refresh_token = tokens.get("refresh_token")
 
+        if not access_token:
+            st.error(f"Failed to get access token: {tokens}")
+            return
+
+        # Save tokens in session state
+        st.session_state["access_token"] = access_token
+        st.session_state["refresh_token"] = refresh_token
+
+    # Step 2: Use stored token
+    access_token = st.session_state["access_token"]
+
+    # Step 3: Playlist creation button
     if st.button("🎶 Create Playlist from Unique Songs"):
-        # Initialize progress bar and text
         progress_bar = st.progress(0)
         progress_text = st.empty()
 
-        # Step 1: Create playlist
-        progress_text.text("📀 Step 1/3: Creating playlist...")
-        playlist = create_spotify_playlist(user_id, access_token)
+        # Get user ID
+        progress_text.text("📀 Step 1/3: Fetching user ID...")
+        user_id = get_spotify_user_id(access_token)
         progress_bar.progress(20)
+        if not user_id:
+            return
 
+        # Create playlist
+        progress_text.text("🎶 Step 2/3: Creating playlist...")
+        playlist = create_spotify_playlist(user_id, access_token)
+        progress_bar.progress(40)
         if "id" not in playlist:
             st.error(f"Failed to create playlist: {playlist}")
             return
-
         playlist_id = playlist["id"]
 
-        # Step 2: Collect track URIs
-        progress_text.text("🎶 Step 2/3: Collecting tracks...")
+        # Add tracks
+        progress_text.text("⏳ Step 3/3: Adding tracks...")
         track_uris = []
         total = len(unique_songs)
         for i, (_, row) in enumerate(unique_songs.iterrows()):
@@ -288,17 +301,13 @@ def create_playlist_from_dataframe(unique_songs):
             )
             if track_id:
                 track_uris.append(f"spotify:track:{track_id}")
-            # Update progress bar proportionally
-            progress_bar.progress(20 + int(60 * (i+1)/total))
+            progress_bar.progress(40 + int(60 * (i+1)/total))
 
-        # Step 3: Add tracks
-        progress_text.text("⏳ Step 3/3: Adding tracks to playlist...")
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
         progress_bar.progress(100)
-
-        # Done
         progress_text.text("✅ Playlist created successfully!")
         st.success("Playlist created successfully!")
+
         st.markdown(
             f"""
             <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
