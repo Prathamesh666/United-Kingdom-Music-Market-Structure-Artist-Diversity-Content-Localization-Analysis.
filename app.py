@@ -6,7 +6,6 @@ import networkx as nx
 import plotly.graph_objects as go
 import plotly.express as px
 from models import *
-from models import message, assign_rank_group, validate_and_preprocess, build_comparison_df
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
