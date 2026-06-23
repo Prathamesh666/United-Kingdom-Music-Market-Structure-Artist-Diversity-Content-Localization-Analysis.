@@ -222,6 +222,7 @@ def create_spotify_playlist(user_id, token, name="UK Dashboard Playlist"):
     payload = {"name": name, "description": "Generated from Streamlit dashboard", "public": False}
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.post(url, json=payload, headers=headers)
+    st.info(f"Playlist info: {response.json()}")
     return response.json()
 
 # Add tracks
