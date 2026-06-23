@@ -217,21 +217,45 @@ def get_spotify_user_id(token: str) -> str:
         return "None"
 
 # Create playlist
-def create_spotify_playlist(user_id, token, name="UK Dashboard Playlist"):
-    url = f"https://api.spotify.com/v1/users/{user_id}/playlists"
+def create_spotify_playlist(token, name="UK Dashboard Playlist"):
+    url = "https://api.spotify.com/v1/me/playlists" # f"https://api.spotify.com/v1/users/{user_id}/playlists"
     payload = {"name": name, "description": "Generated from Streamlit dashboard", "public": False}
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.post(url, json=payload, headers=headers)
     st.info(f"Playlist info: {response.json()}")
     return response.json()
 
-# Add tracks
+# Add tracks in batches of 100 with progress bar
 def add_tracks_to_playlist(playlist_id, track_uris, token):
     url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
-    payload = {"uris": track_uris}
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.post(url, json=payload, headers=headers)
-    return response.json()
+
+    total = len(track_uris)
+    num_batches = (total // 100) + (1 if total % 100 else 0)
+
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+
+    for batch_idx, i in enumerate(range(0, total, 100), start=1):
+        chunk = track_uris[i:i+100]
+        payload = {"uris": chunk}
+        response = requests.post(url, json=payload, headers=headers)
+
+        if response.status_code not in (200, 201):
+            st.error(f"Failed to add tracks: {response.json()}")
+            return response.json()
+        else:
+            # Update progress bar and text
+            percent_complete = int((batch_idx / num_batches) * 100)
+            progress_bar.progress(percent_complete)
+            progress_text.text(
+                f"Uploading batch {batch_idx}/{num_batches} "
+                f"({len(chunk)} tracks)..."
+            )
+
+    progress_bar.progress(100)
+    progress_text.text("✅ All tracks uploaded successfully!")
+    return {"status": "success"}
 
 # Main helper
 def create_playlist_from_dataframe(unique_songs):
@@ -291,7 +315,7 @@ def create_playlist_from_dataframe(unique_songs):
             return
         playlist_id = playlist["id"]
 
-        # Add tracks
+        # Add tracks in batches
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         track_uris = []
         total = len(unique_songs)
@@ -308,7 +332,12 @@ def create_playlist_from_dataframe(unique_songs):
         progress_bar.progress(100)
         progress_text.text("✅ Playlist created successfully!")
         st.success("Playlist created successfully!")
-
+        
+        # Fetch user info again to confirm owner
+        user_info = get_spotify_user_id(access_token)
+        if user_info:
+            st.markdown(f"👤 Playlist owner: **{user_info}**")
+        
         st.markdown(
             f"""
             <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
