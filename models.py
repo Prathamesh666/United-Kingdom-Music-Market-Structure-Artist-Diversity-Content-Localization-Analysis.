@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
-import torch, requests, io
+import torch, requests, io, urllib.parse
 
 def message():
     st.error("Please reload the application and allow 3–4 minutes (6-7 minutes if your internet speed is slow i.e below 40 MBPS) for the dashboard to fully initialize the Baseline Market. Avoid changing sidebar filters during this process.")
@@ -122,3 +122,177 @@ def predict_genre_from_image_ai_conceptual(image_url):
         return major_genres[predicted_idx]
     except Exception:
         return "Unknown"
+    
+# Spotify credentials (replace with your own)
+CLIENT_ID = "9f5f22e29b7044d3960635ec40067401"
+CLIENT_SECRET = "6fefac9243674acfbd7fef4a1aca7f6a"
+
+# Get Spotify access token
+def get_spotify_token():
+    auth_url = "https://accounts.spotify.com/api/token"
+    auth_response = requests.post(auth_url, {
+        "grant_type": "client_credentials",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+    })
+    return auth_response.json()["access_token"]
+
+token = get_spotify_token()
+headers = {"Authorization": f"Bearer {token}"}
+
+def search_spotify_track(song, artist, headers):
+    query = urllib.parse.quote(f"{song} {artist}")
+    url = f"https://api.spotify.com/v1/search?q={query}&type=track&limit=1"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print("Spotify API error:", response.status_code, response.text)
+        return None
+
+    try:
+        results = response.json()
+    except ValueError:
+        print("Response was not JSON:", response.text[:200])  # show first 200 chars
+        return None
+
+    items = results.get("tracks", {}).get("items", [])
+    if items:
+        track_id = items[0]["id"]
+        preview_url = items[0].get("preview_url")  # may be None
+        return track_id, preview_url
+    return None
+
+def get_youtube_video_id(song: str, artist: str, api_key: str) -> str:
+    """
+    Search YouTube for the official music video of a song + artist.
+    Returns the first matching video ID or None.
+    """
+    query = f"{song} {artist} official music video"
+    url = "https://www.googleapis.com/youtube/v3/search"
+    
+    params = {
+        "part": "snippet",
+        "q": query,
+        "type": "video",
+        "videoCategoryId": "10",   # Music category
+        "maxResults": 1,
+        "key": api_key
+    }
+    
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        items = data.get("items", [])
+        if items:
+            return items[0]["id"]["videoId"]
+    return "None"
+
+REDIRECT_URI = "https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/"
+
+# Exchange authorization code for access token
+def get_token(code: str):
+    url = "https://accounts.spotify.com/api/token"
+    payload = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": REDIRECT_URI,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+    }
+    response = requests.post(url, data=payload)
+    return response.json()
+
+# Get current user ID
+def get_spotify_user_id(token: str) -> str:
+    url = "https://api.spotify.com/v1/me"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()["id"]
+    else:
+        st.error(f"Failed to fetch user ID: {response.text}")
+        return "None"
+
+# Create playlist
+def create_spotify_playlist(user_id, token, name="UK Dashboard Playlist"):
+    url = f"https://api.spotify.com/v1/users/{user_id}/playlists"
+    payload = {"name": name, "description": "Generated from Streamlit dashboard", "public": False}
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.post(url, json=payload, headers=headers)
+    return response.json()
+
+# Add tracks
+def add_tracks_to_playlist(playlist_id, track_uris, token):
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+    payload = {"uris": track_uris}
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.post(url, json=payload, headers=headers)
+    return response.json()
+
+# Main helper
+def create_playlist_from_dataframe(unique_songs):
+    # Use st.query_params instead of experimental_get_query_params
+    query_params = st.query_params
+    if "code" not in query_params:
+        auth_url = (
+            f"https://accounts.spotify.com/authorize"
+            f"?client_id={CLIENT_ID}"
+            f"&response_type=code"
+            f"&redirect_uri={REDIRECT_URI}"
+            f"&scope=playlist-modify-private playlist-modify-public"
+        )
+        st.markdown(
+            f'<a href="{auth_url}" target="_blank">🔑 Login with Spotify</a>',
+            unsafe_allow_html=True
+        )
+        return
+
+    code = query_params["code"][0]
+    tokens = get_token(code)
+    access_token = tokens.get("access_token")
+    if not access_token:
+        st.error(f"Failed to get access token: {tokens}")
+        return
+
+    user_id = get_spotify_user_id(access_token)
+    if not user_id:
+        return
+
+    if st.button("🎶 Create Playlist from Unique Songs"):
+        playlist = create_spotify_playlist(user_id, access_token)
+        if "id" not in playlist:
+            st.error(f"Failed to create playlist: {playlist}")
+            return
+
+        playlist_id = playlist["id"]
+
+        track_uris = []
+        for _, row in unique_songs.iterrows():
+            track_id = search_spotify_track(row["song"], row["artist"], {"Authorization": f"Bearer {access_token}"})
+            if track_id:
+                track_uris.append(f"spotify:track:{track_id}")
+
+        add_tracks_to_playlist(playlist_id, track_uris, access_token)
+
+        st.success("Playlist created successfully!")
+        st.markdown(f"[🎧 Open Playlist in Spotify](https://open.spotify.com/playlist/{playlist_id})")
+        st.markdown(
+            f"""
+            <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
+                <button style="background-color:#1DB954;
+                            border:none;
+                            color:white;
+                            padding:10px 20px;
+                            text-align:center;
+                            text-decoration:none;
+                            display:inline-block;
+                            font-size:16px;
+                            border-radius:20px;
+                            cursor:pointer;">
+                    🎧 Open Playlist in Spotify
+                </button>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+        

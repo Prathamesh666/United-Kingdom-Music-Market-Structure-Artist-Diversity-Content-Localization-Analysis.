@@ -228,7 +228,6 @@ is_any_filter_different = (
     or is_popularity_filter_different
 )
 
-
 # --- 4. Time Series Data (`unique_artists_per_day`) (from Section II, needed for dashboard) ---
 unique_artists_per_day = filtered_df.groupby('date')['artist'].nunique()
 try:
@@ -245,7 +244,7 @@ except:
 # Conceptual definition of major genres
 from huggingface_hub import login
 # Try Streamlit secrets first
-hf_token = st.secrets.get("HF_TOKEN")
+hf_token = "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" #st.secrets.get("HF_TOKEN")
 
 if hf_token:
     try:
@@ -358,9 +357,92 @@ print("✅ Genre-specific statistics calculated.")
 
 print("--- All required dataframes and variables are now prepared. ---")
 
-tab1, tab2 = st.tabs(["UK Music Market Structural Analysis", 
-                    "Recommendational Analysis for UK's Music Listeners"])
+tab1, tab2, tab3 = st.tabs(["UK Music Market Structural Analysis", 
+                    "Recommendational Analysis for UK's Music Listeners", "Music Streaming for All Music Listeners"])
+        
+with tab3:
+    # Header row with symbol + title
+    col1, col2 = st.columns([1,9])
+    with col1:
+        st.image("static/Livestream_symbol.png", width=80)
+    with col2:
+        st.header("🎵 United Kingdom's Music Streaming")
+        st.balloons()
 
+    st.divider()
+
+    # Deduplicate songs
+    unique_songs = (
+        filtered_df
+        .groupby("song")
+        .agg({
+            "artist": lambda x: ", ".join(sorted(set(x))),
+            "album_cover_url": "first"  # keep one representative cover
+        })
+        .reset_index()
+    )
+    print(len(unique_songs))
+
+    # Search bar
+    query = st.text_input("🔍 Search for a song or artist")
+    if query:
+        try:
+            filtered = unique_songs[
+                unique_songs["song"].str.contains(query, case=False) |
+                unique_songs["artist"].str.contains(query, case=False)
+            ]
+        except:
+            st.warning("Song is not from the United Kingdom's dataset")
+    else:
+        filtered = unique_songs
+
+    # Dropdown
+    choices = filtered.sort_values(by="song").apply(lambda r: f"{r['song']} — {r['artist']}", axis=1)
+    selected = st.selectbox("🎶 Choose a song to play:", choices)   
+    # Find the row for the selected song
+    row = filtered[filtered.apply(lambda r: f"{r['song']} — {r['artist']}", axis=1) == selected].iloc[0]
+    
+    song, artist = selected.split(" — ")
+
+    # Spotify setup
+    token = get_spotify_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    result = search_spotify_track(song, artist, headers)
+
+    if result is not None:
+        track_id, preview_url = result
+
+        # Two-column layout for Spotify + YouTube
+        col_audio, col_video = st.columns([1,2.25])
+
+        with col_audio:
+            if track_id:
+                spotify_embed = f"""
+                <iframe src="https://open.spotify.com/embed/track/{track_id}" 
+                width="100%" height="100%" frameborder="0" allowtransparency="true" 
+                allow="encrypted-media"></iframe>
+                """
+                st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
+                st.iframe(spotify_embed)
+            elif preview_url:
+                st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
+                st.audio(preview_url, format="audio/mp3")
+
+        with col_video:
+            api_key = "AIzaSyDEWfdhR2DizbxfklqGOl2g_EVVro5cnws"
+            video_id = get_youtube_video_id(song, artist, api_key)
+            if video_id:
+                st.video(f"https://www.youtube.com/watch?v={video_id}")
+            else:
+                st.warning("No official video found.")
+        st.divider()
+        # Banner
+        st.image("static/Livestream_banner.png")
+        
+        st.subheader("📀 Create a Spotify Playlist")
+        if st.button("🎶 Create Playlist from Unique Songs"):
+            create_playlist_from_dataframe(unique_songs)
+    
 with tab1:
     st.balloons()
     st.title('United Kingdom Music Market Structural Analysis')
