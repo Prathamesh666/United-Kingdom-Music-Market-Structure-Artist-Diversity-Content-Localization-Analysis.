@@ -325,6 +325,7 @@ def create_playlist_from_dataframe(unique_songs):
         # Get user info
         progress_text.text("📀 Step 1/3: Fetching user info...")
         user_info = get_spotify_user_info(access_token)
+        st.write(user_info)
         progress_bar.progress(20)
         if not user_info:
             return
@@ -359,9 +360,11 @@ def create_playlist_from_dataframe(unique_songs):
             progress_text.text(f"Searching track {i+1}/{total}...")
         
         # Debug check
+        st.write("Token user ID:", user_info["id"])
+        st.write("Playlist owner ID:", playlist["owner"]["id"])
         st.write("Final track URIs:", track_uris[:5])
         st.write("Using token:", access_token)
-        # finally add tracks
+        
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
 
         progress_bar.progress(100)
