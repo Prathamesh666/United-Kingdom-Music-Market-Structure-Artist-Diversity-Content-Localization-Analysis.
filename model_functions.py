@@ -358,6 +358,9 @@ def create_playlist_from_dataframe(unique_songs):
             progress_bar.progress(percent_complete)
             progress_text.text(f"Searching track {i+1}/{total}...")
         
+        # Debug check
+        st.write("Final track URIs:", track_uris[:5])
+        st.write("Using token:", access_token)
         # finally add tracks
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
 
