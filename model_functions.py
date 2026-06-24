@@ -352,7 +352,7 @@ def create_playlist_from_dataframe(unique_songs):
             )
             
             if track_id:  # only append if we got a valid track_id
-                track_uris.append(f"spotify:track:{track_id[0]}")
+                track_uris.append(f"{track_id[0]}")
         
             # update progress bar gradually
             percent_complete = 40 + int(60 * (i+1)/total)
