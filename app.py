@@ -418,6 +418,7 @@ with tab3:
         else:
             st.warning("YouTube API key not configured.")
             
+    create_playlist_button(unique_songs)
     create_playlist_from_dataframe(unique_songs)
             
     try:

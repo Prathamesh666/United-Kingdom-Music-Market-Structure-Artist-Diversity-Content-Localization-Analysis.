@@ -257,6 +257,8 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     for batch_idx, i in enumerate(range(0, total, 100), start=1):
         chunk = track_uris[i:i+100]
         payload = {"uris": chunk}
+        import json
+        st.write("Payload being sent:", json.dumps({"uris": track_uris[:5]}, indent=2))
         st.write("Sending chunk:", payload)
 
         response = requests.post(url, json=payload, headers=headers)
@@ -360,6 +362,8 @@ def create_playlist_from_dataframe(unique_songs):
             progress_text.text(f"Searching track {i+1}/{total}...")
         
         # Debug check
+        # Clean up track_uris before sending
+        track_uris = [str(uri) for uri in track_uris if uri]
         st.write("Token user ID:", user_info["id"])
         st.write("Playlist owner ID:", playlist["owner"]["id"])
         st.write("Final track URIs:", track_uris[:5])
@@ -388,6 +392,89 @@ def create_playlist_from_dataframe(unique_songs):
                             font-size:16px;
                             border-radius:20px;
                             cursor:pointer;">
+                    🎧 Open Playlist in Spotify
+                </button>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+
+def create_playlist_button(unique_songs):
+    if st.button("🎶 Create Playlist"):
+        progress_bar = st.progress(0)
+        progress_text = st.empty()
+
+        # Step 1: Login + token exchange
+        query_params = st.query_params
+        if "access_token" not in st.session_state:
+            if "code" not in query_params:
+                auth_url = (
+                    f"https://accounts.spotify.com/authorize"
+                    f"?client_id={CLIENT_ID}"
+                    f"&response_type=code"
+                    f"&redirect_uri={REDIRECT_URI}"
+                    f"&scope=playlist-modify-private playlist-modify-public"
+                )
+                st.markdown(f"[🔑 Login with Spotify]({auth_url})")
+                return
+
+            code = query_params["code"]
+            tokens = get_token(code)
+            if "access_token" not in tokens:
+                st.error("Failed to get access token")
+                return
+
+            st.session_state["access_token"] = tokens["access_token"]
+            st.session_state["refresh_token"] = tokens.get("refresh_token")
+
+        access_token = st.session_state["access_token"]
+
+        # Step 2: Get user info
+        progress_text.text("📀 Fetching user info...")
+        user_info = get_spotify_user_info(access_token)
+        progress_bar.progress(20)
+        if not user_info:
+            return
+
+        # Step 3: Create playlist
+        progress_text.text("🎶 Creating playlist...")
+        playlist = create_spotify_playlist(access_token)
+        progress_bar.progress(40)
+        if "id" not in playlist:
+            st.error("Failed to create playlist")
+            return
+        playlist_id = playlist["id"]
+
+        # Step 4: Collect track URIs
+        progress_text.text("⏳ Searching tracks...")
+        track_uris = []
+        total = len(unique_songs)
+        for i, (_, row) in enumerate(unique_songs.iterrows()):
+            track_id = search_spotify_track(
+                row["song"], row["artist"],
+                {"Authorization": f"Bearer {access_token}"}
+            )
+            if track_id:
+                track_uris.append(f"spotify:track:{track_id[0]}")
+
+            percent_complete = 40 + int(60 * (i+1)/total)
+            progress_bar.progress(percent_complete)
+            progress_text.text(f"Searching track {i+1}/{total}...")
+
+        # Step 5: Add tracks
+        add_tracks_to_playlist(playlist_id, track_uris, access_token)
+
+        progress_bar.progress(100)
+        progress_text.text("✅ Playlist created successfully!")
+        st.success("Playlist created successfully!")
+
+        # Show owner info + link
+        st.markdown(f"👤 Playlist owner: **{user_info.get('id')}**")
+        st.markdown(
+            f"""
+            <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
+                <button style="background-color:#1DB954;border:none;color:white;
+                                padding:10px 20px;border-radius:20px;cursor:pointer;">
                     🎧 Open Playlist in Spotify
                 </button>
             </a>
