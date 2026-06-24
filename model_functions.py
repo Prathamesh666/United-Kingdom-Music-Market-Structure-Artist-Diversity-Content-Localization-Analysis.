@@ -241,6 +241,38 @@ def create_spotify_playlist(token, name="UK Dashboard Playlist"):
     st.info(f"Playlist info: {response.json()}")
     return response.json()
 
+def add_tracks_to_playlist(playlist_id, track_uris, token):
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    total = len(track_uris)
+    num_batches = (total // 100) + (1 if total % 100 else 0)
+
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+
+    for batch_idx, i in enumerate(range(0, total, 100), start=1):
+        chunk = track_uris[i:i+100]
+        payload = {"uris": chunk}
+        st.write("Sending chunk:", payload)
+
+        response = requests.post(url, json=payload, headers=headers)
+
+        if response.status_code not in (200, 201):
+            st.error(f"Failed to add tracks: {response.json()}")
+            return response.json()
+
+        percent_complete = int((batch_idx / num_batches) * 100)
+        progress_bar.progress(percent_complete)
+        progress_text.text(f"Uploading batch {batch_idx}/{num_batches} ({len(chunk)} tracks)...")
+
+    progress_bar.progress(100)
+    progress_text.text("✅ All tracks uploaded successfully!")
+    return {"status": "success"}
+
 def create_playlist_from_dataframe(unique_songs):
     query_params = st.query_params
 
