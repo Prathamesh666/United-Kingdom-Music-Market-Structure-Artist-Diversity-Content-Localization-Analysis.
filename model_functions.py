@@ -306,6 +306,7 @@ def create_playlist_from_dataframe(unique_songs):
         st.session_state["access_token"] = access_token
         st.session_state["refresh_token"] = refresh_token
         st.session_state["scope"] = scope
+        st.write(f"Scope: {scope}")
 
     # Step 2: Ensure token is valid (refresh if needed)
     access_token = st.session_state["access_token"]
