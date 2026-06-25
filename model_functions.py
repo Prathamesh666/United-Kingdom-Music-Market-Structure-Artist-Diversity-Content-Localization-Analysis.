@@ -312,10 +312,8 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     progress_text.text("✅ All tracks uploaded successfully!")
     return {"status": "success"}
 
-
-from app import start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range, selected_popularity, selected_genres, is_any_filter_different
-
-def create_playlist_from_dataframe(unique_songs):
+def create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range,
+                                selected_popularity, selected_genres, is_any_filter_different):
     query_params = st.query_params
 
     # Step 1: Handle login
@@ -457,7 +455,8 @@ def create_playlist_from_dataframe(unique_songs):
             unsafe_allow_html=True
         )
 
-def create_playlist_button(unique_songs):
+def create_playlist_button(unique_songs, start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range,
+                                selected_popularity, selected_genres, is_any_filter_different):
     if st.button("🎶 Create Playlist"):
         progress_bar = st.progress(0)
         progress_text = st.empty()
