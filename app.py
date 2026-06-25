@@ -440,13 +440,35 @@ with tab3:
 
     st.divider()
     st.subheader("📀 Create a Spotify Playlist")
-    # Single call to playlist creation
+    st.markdown(
+        """
+        ### 📝 Steps to Create Your Playlist
+    
+        **Before Login 🔑**
+        1. Select filters → date range, album types, popularity, duration.
+        2. Decide if the playlist should be collaborative.
+        3. Review your selections.
+    
+        **During Login 🔐**
+        - Accept the required **Spotify scopes/permissions** shown in the login window (e.g. playlist‑modify‑public, playlist‑modify‑private).  
+        - Without granting these, playlist creation will not work.
+    
+        **After Login ✅**
+        4. Click the button below to generate your personalized playlist.
+        5. Wait for sometime & Open it directly in Spotify and enjoy your mix!
+        """, unsafe_allow_html=True
+    )
     create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different)
 
-    
     # Banner
-    st.image("static/Livestream_banner.png")
+    st.markdown(
+        """
+        <div style="width:100%;">
+            <img src="static/Livestream_banner.png" style="width:100%; height:auto;">
+        </div>
+        """, unsafe_allow_html=True
+    )
 
 with tab1:
     st.balloons()

@@ -217,7 +217,6 @@ def refresh_access_token(refresh_token: str):
     }
     response = requests.post(url, data=payload)
     data = response.json()
-    st.info(f"Refresh response: {data}")  # Debugging
     return data
 
 # Get current user info (id + product type)
@@ -235,18 +234,17 @@ def get_spotify_user_info(token: str):
 def build_playlist_description(start_date, end_date, collaboration_choice, selected_album_types,
                                 duration_range, selected_popularity, is_any_filter_different):
     if not is_any_filter_different:
-        return "Generated from Streamlit dashboard"
+        return "Turn up the volume! Feel the rhythm 🎵 Catch the vibe 🎧 Dive into a colorful mix of hits 🎤 and discoveries 🌟 — soaring choruses 🎼 that lift your spirit, mellow grooves 🌙 that ease the night, fresh voices 🎸 bringing new energy, timeless favorites 🕰️ that never fade, and endless replay 🔁 for every mood."
 
-    description_parts = [ "Curated with your filters: Date Range, Artists, Track Type, Album Type, Duration, Popularity, Genres.",
+    description_parts = [
         f"Date Range: {start_date} to {end_date}",
         f"Track Type: {collaboration_choice}",
         f"Album Types: {', '.join(selected_album_types) if selected_album_types else 'All'}",
         f"Duration: {duration_range[0]}–{duration_range[1]} minutes",
         f"Popularity: {selected_popularity[0]}–{selected_popularity[1]}"
     ]
-    print(description_parts) # debugging
 
-    return "Playlist generated with filters → " + " | ".join(description_parts)
+    return "Playlist generated with filters: Date Range, Artists, Track Type, Album Type, Duration, Popularity, Genres → " + " | ".join(description_parts)
 
 # Create playlist (modern endpoint)
 def create_spotify_playlist(token, name, description):
@@ -254,7 +252,7 @@ def create_spotify_playlist(token, name, description):
     payload = {"name": name, "description": description, "public": False}
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.post(url, json=payload, headers=headers)
-    st.info(f"Playlist info: {response.json()}")
+    with st.expander("Playlist Information: "): st.info(f"Playlist info: {response.json()}")
     return response.json()
 
 def upload_playlist_cover(playlist_id, image_path, token):
@@ -294,9 +292,6 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     for batch_idx, i in enumerate(range(0, total, 100), start=1):
         chunk = track_uris[i:i+100]
         payload = {"uris": chunk}
-        import json
-        st.write("Payload being sent:", json.dumps({"uris": track_uris[:5]}, indent=2))
-        st.write("Sending chunk:", payload)
 
         response = requests.post(url, json=payload, headers=headers)
 
@@ -326,10 +321,12 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
                 f"&redirect_uri={REDIRECT_URI}"
                 f"&scope=playlist-modify-private playlist-modify-public"
             )
-            st.markdown(
-                f'<a href="{auth_url}" target="_blank">🔑 Login with Spotify</a>',
-                unsafe_allow_html=True
+            st.warning(
+                "⚠️ Recommendation: Please generate your playlist first before running multiple song searches. "
+                "Spotify enforces strict rate limits, and repeated token requests or excessive track lookups can quickly exhaust your quota. "
+                "Creating the playlist up front minimizes redundant API calls and helps avoid hitting Spotify’s limits."
             )
+            st.markdown( f'🔑 <a href="{auth_url}" target="_blank">Login with Spotify</a>', unsafe_allow_html=True )
             return
 
         code = query_params["code"]
@@ -365,23 +362,17 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         # Get user info
         progress_text.text("📀 Step 1/3: Fetching user info...")
         user_info = get_spotify_user_info(access_token)
-        st.write(user_info)
         progress_bar.progress(20)
         if not user_info:
             return
 
         # Create playlist
-        # 🎤 Ask for playlist name in a modal if filters changed
-        playlist_name = "United Kingdom Dashboard Playlist"
+        playlist_name = "🎤 Atlantic United Kingdom Playlist"
         if is_any_filter_different:
-            playlist_name = "United Kingdom Dashboard Playlist Filtered"
+            playlist_name = "🎤 Atlantic United Kingdom Playlist Filtered"
                 
-        playlist_description = build_playlist_description(
-            start_date, end_date, collaboration_choice,
-            selected_album_types, duration_range,
-            selected_popularity,
-            is_any_filter_different
-        )
+        playlist_description = build_playlist_description( 
+            start_date, end_date, collaboration_choice, selected_album_types, duration_range, selected_popularity, is_any_filter_different )
         
         progress_text.text("🎶 Step 2/3: Creating playlist...")
         playlist = create_spotify_playlist(access_token, name=playlist_name, description=playlist_description)
@@ -390,7 +381,6 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
             st.error(f"Failed to create playlist: {playlist}")
             return
         playlist_id = playlist["id"]
-        #upload_playlist_cover(playlist_id, "static/resized_Livestream_symbol.png", access_token)
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
@@ -415,137 +405,23 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         # Debug check
         # Clean up track_uris before sending
         track_uris = [str(uri) for uri in track_uris if uri]
-        st.write("Token user ID:", user_info["id"])
-        st.write("Playlist owner ID:", playlist["owner"]["id"])
-        st.write("Final track URIs:", track_uris[:5])
-        st.write("Using token:", access_token)
-        
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
-
         progress_bar.progress(100)
         progress_text.text("✅ Playlist created successfully!")
         st.success("Playlist created successfully!")
 
         # Show owner info
-        st.markdown(f"👤 Playlist owner: **{user_info.get('display_name', user_info.get('id'))}**")
-        
         st.markdown(
             f"""
-            <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
-                <button style="background-color:#1DB954; border:none; color:white; padding:10px 20px; text-align:center; 
-                    text-decoration:none; display:inline-block; font-size:16px; border-radius:20px; cursor:pointer;"> 🎧 Open Playlist in Spotify
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
-
-def create_playlist_button(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
-                                selected_popularity, is_any_filter_different):
-    if st.button("🎶 Create Playlist"):
-        progress_bar = st.progress(0)
-        progress_text = st.empty()
-
-        # Step 1: Login + token exchange
-        query_params = st.query_params
-        if "access_token" not in st.session_state:
-            if "code" not in query_params:
-                auth_url = (
-                    f"https://accounts.spotify.com/authorize"
-                    f"?client_id={CLIENT_ID}"
-                    f"&response_type=code"
-                    f"&redirect_uri={REDIRECT_URI}"
-                    f"&scope=playlist-modify-private playlist-modify-public"
-                )
-                st.markdown(f"[🔑 Login with Spotify]({auth_url})")
-                return
-
-            code = query_params["code"]
-            tokens = get_token(code)
-            if "access_token" not in tokens:
-                st.error("Failed to get access token")
-                return
-
-            st.session_state["access_token"] = tokens["access_token"]
-            st.session_state["refresh_token"] = tokens.get("refresh_token")
-
-        access_token = st.session_state["access_token"]
-
-        # Step 2: Get user info
-        progress_text.text("📀 Fetching user info...")
-        user_info = get_spotify_user_info(access_token)
-        progress_bar.progress(20)
-        if not user_info:
-            return
-
-        # Step 3: Create playlist
-        # 🎤 Ask for playlist name in a modal if filters changed
-        playlist_name = "United Kingdom Dashboard Playlist"
-        if is_any_filter_different:
-            with st.form("playlist_name_form", clear_on_submit=True):
-                st.write("📝 Please enter a name for your playlist:")
-                playlist_name = "United Kingdom Dashboard Playlist Filtered"
-                # Show default name in the input field
-                playlist_name_input = st.text_input(
-                    "Playlist name",
-                    value=playlist_name  # ✅ default pre-filled
-                )
-                
-                submitted = st.form_submit_button("Confirm")
-                if submitted:
-                    playlist_name = playlist_name_input.strip() or playlist_name
-                else:
-                    st.warning("Playlist name required to continue.")
-                    return
-                
-        playlist_description = build_playlist_description(
-            start_date, end_date,collaboration_choice,
-            selected_album_types, duration_range,
-            selected_popularity,
-            is_any_filter_different
-        )
-        
-        progress_text.text("🎶 Creating playlist...")
-        playlist = create_spotify_playlist(access_token, playlist_name, playlist_description)
-        progress_bar.progress(40)
-        if "id" not in playlist:
-            st.error("Failed to create playlist")
-            return
-        playlist_id = playlist["id"]
-
-        # Step 4: Collect track URIs
-        progress_text.text("⏳ Searching tracks...")
-        track_uris = []
-        total = len(unique_songs)
-        for i, (_, row) in enumerate(unique_songs.iterrows()):
-            track_id = search_spotify_track(
-                row["song"], row["artist"],
-                {"Authorization": f"Bearer {access_token}"}
-            )
-            if track_id:
-                track_uris.append(f"spotify:track:{track_id[0]}")
-
-            percent_complete = 40 + int(60 * (i+1)/total)
-            progress_bar.progress(percent_complete)
-            progress_text.text(f"Searching track {i+1}/{total}...")
-
-        # Step 5: Add tracks
-        add_tracks_to_playlist(playlist_id, track_uris, access_token)
-
-        progress_bar.progress(100)
-        progress_text.text("✅ Playlist created successfully!")
-        st.success("Playlist created successfully!")
-
-        # Show owner info + link
-        st.markdown(f"👤 Playlist owner: **{user_info.get('id')}**")
-        st.markdown(
-            f"""
-            <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
-                <button style="background-color:#1DB954;border:none;color:white;
-                                padding:10px 20px;border-radius:20px;cursor:pointer;">
-                    🎧 Open Playlist in Spotify
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
+            <div style="text-align:center;">
+                <p>👤 Playlist owner: <strong>{user_info.get('display_name', user_info.get('id'))}</strong></p>
+                <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
+                    <button style="background-color:#1DB954; border:none; color:white; padding:10px 20px; 
+                        text-align:center; text-decoration:none; display:inline-block; font-size:16px; 
+                        border-radius:20px; cursor:pointer;">
+                        🎧 Open Playlist in Spotify
+                    </button>
+                </a>
+            </div>
+            """, unsafe_allow_html=True
         )
