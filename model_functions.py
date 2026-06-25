@@ -237,15 +237,15 @@ def build_playlist_description(start_date, end_date, selected_artists, collabora
     if not is_any_filter_different:
         return "Generated from Streamlit dashboard"
 
-    description_parts = [
+    description_parts = [ "Curated with your filters: Date Range, Artists, Track Type, Album Type, Duration, Popularity, Genres.",
         f"Date Range: {start_date} to {end_date}",
-        f"Artists: {', '.join(selected_artists) if selected_artists else 'All'}",
         f"Track Type: {collaboration_choice}",
         f"Album Types: {', '.join(selected_album_types) if selected_album_types else 'All'}",
         f"Duration: {duration_range[0]}–{duration_range[1]} minutes",
         f"Popularity: {selected_popularity[0]}–{selected_popularity[1]}",
         f"Genres: {', '.join(selected_genres) if selected_genres else 'All'}"
     ]
+    print(description_parts) # debugging
 
     return "Playlist generated with filters → " + " | ".join(description_parts)
 
@@ -261,6 +261,7 @@ def create_spotify_playlist(token, name, description):
 def upload_playlist_cover(playlist_id, image_path, token):
     # Convert PNG → JPEG in memory
     img = Image.open(image_path).convert("RGB")
+    img = img.resize((640, 640))
     from io import BytesIO
     buffer = BytesIO()
     img.save(buffer, format="JPEG")
@@ -404,7 +405,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_
             st.error(f"Failed to create playlist: {playlist}")
             return
         playlist_id = playlist["id"]
-        upload_playlist_cover(playlist_id, "static/Livestream_symbol.png", access_token)
+        upload_playlist_cover(playlist_id, "static/resized_Livestream_symbol.png", access_token)
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
