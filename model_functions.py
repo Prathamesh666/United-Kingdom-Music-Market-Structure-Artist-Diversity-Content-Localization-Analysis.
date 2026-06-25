@@ -374,21 +374,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         # 🎤 Ask for playlist name in a modal if filters changed
         playlist_name = "United Kingdom Dashboard Playlist"
         if is_any_filter_different:
-            with st.form("playlist_name_form", clear_on_submit=True):
-                st.write("📝 Please enter a name for your playlist:")
-                playlist_name = "United Kingdom Dashboard Playlist Filtered"
-                # Show default name in the input field
-                playlist_name_input = st.text_input(
-                    "Playlist name",
-                    value=playlist_name  # ✅ default pre-filled
-                )
-                
-                submitted = st.form_submit_button("Confirm")
-                if submitted:
-                    playlist_name = playlist_name_input.strip() or playlist_name
-                else:
-                    st.warning("Playlist name required to continue.")
-                    return  # ⛔ stop execution until user clicks Confirm
+            playlist_name = "United Kingdom Dashboard Playlist Filtered"
                 
         playlist_description = build_playlist_description(
             start_date, end_date, collaboration_choice,
