@@ -242,8 +242,7 @@ def build_playlist_description(start_date, end_date, selected_artists, collabora
         f"Track Type: {collaboration_choice}",
         f"Album Types: {', '.join(selected_album_types) if selected_album_types else 'All'}",
         f"Duration: {duration_range[0]}–{duration_range[1]} minutes",
-        f"Popularity: {selected_popularity[0]}–{selected_popularity[1]}",
-        f"Genres: {', '.join(selected_genres) if selected_genres else 'All'}"
+        f"Popularity: {selected_popularity[0]}–{selected_popularity[1]}"
     ]
     print(description_parts) # debugging
 
