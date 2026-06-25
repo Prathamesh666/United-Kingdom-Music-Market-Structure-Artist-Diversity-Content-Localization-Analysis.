@@ -388,7 +388,6 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_
                     playlist_name = playlist_name_input.strip() or playlist_name
                 else:
                     st.warning("Playlist name required to continue.")
-                    return
                 
         playlist_description = build_playlist_description(
             start_date, end_date,
