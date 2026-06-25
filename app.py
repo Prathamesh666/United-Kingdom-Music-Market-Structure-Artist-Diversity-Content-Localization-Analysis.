@@ -441,8 +441,8 @@ with tab3:
     st.divider()
     st.subheader("📀 Create a Spotify Playlist")
     # Single call to playlist creation
-    create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range,
-                                selected_popularity, selected_genres, is_any_filter_different)
+    create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+                                selected_popularity, is_any_filter_different)
 
     
     # Banner

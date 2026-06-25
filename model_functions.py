@@ -232,8 +232,8 @@ def get_spotify_user_info(token: str):
         return None
 
 # Build playlist description dynamically
-def build_playlist_description(start_date, end_date, selected_artists, collaboration_choice, selected_album_types,
-                                duration_range, selected_popularity, selected_genres, is_any_filter_different):
+def build_playlist_description(start_date, end_date, collaboration_choice, selected_album_types,
+                                duration_range, selected_popularity, is_any_filter_different):
     if not is_any_filter_different:
         return "Generated from Streamlit dashboard"
 
@@ -312,8 +312,8 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     progress_text.text("✅ All tracks uploaded successfully!")
     return {"status": "success"}
 
-def create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range,
-                                selected_popularity, selected_genres, is_any_filter_different):
+def create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+                                selected_popularity, is_any_filter_different):
     query_params = st.query_params
 
     # Step 1: Handle login
@@ -390,10 +390,9 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_
                     st.warning("Playlist name required to continue.")
                 
         playlist_description = build_playlist_description(
-            start_date, end_date,
-            selected_artists, collaboration_choice,
+            start_date, end_date, collaboration_choice,
             selected_album_types, duration_range,
-            selected_popularity, selected_genres,
+            selected_popularity,
             is_any_filter_different
         )
         
@@ -404,7 +403,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_
             st.error(f"Failed to create playlist: {playlist}")
             return
         playlist_id = playlist["id"]
-        upload_playlist_cover(playlist_id, "static/resized_Livestream_symbol.png", access_token)
+        #upload_playlist_cover(playlist_id, "static/resized_Livestream_symbol.png", access_token)
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
@@ -454,8 +453,8 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, selected_
             unsafe_allow_html=True
         )
 
-def create_playlist_button(unique_songs, start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range,
-                                selected_popularity, selected_genres, is_any_filter_different):
+def create_playlist_button(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+                                selected_popularity, is_any_filter_different):
     if st.button("🎶 Create Playlist"):
         progress_bar = st.progress(0)
         progress_text = st.empty()
@@ -513,10 +512,9 @@ def create_playlist_button(unique_songs, start_date, end_date, selected_artists,
                     return
                 
         playlist_description = build_playlist_description(
-            start_date, end_date,
-            selected_artists, collaboration_choice,
+            start_date, end_date,collaboration_choice,
             selected_album_types, duration_range,
-            selected_popularity, selected_genres,
+            selected_popularity,
             is_any_filter_different
         )
         
