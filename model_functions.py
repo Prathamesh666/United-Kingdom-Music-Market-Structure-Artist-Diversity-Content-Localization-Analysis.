@@ -4,8 +4,6 @@ from sklearn.metrics import accuracy_score, classification_report
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 import torch, requests, io, urllib.parse, base64
-from app import start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range, selected_popularity, selected_genres, is_any_filter_different
-
 def message():
     st.error("Please reload the application and allow 3–4 minutes (6-7 minutes if your internet speed is slow i.e below 40 MBPS) for the dashboard to fully initialize the Baseline Market. Avoid changing sidebar filters during this process.")
     st.warning("The filter feature compares your 'Custom/Filtered Market' selection against the 'Baseline Market'. For accurate results, let the dashboard complete its loading cycle. You will receive toast notifications as the dashboard becomes ready; until then, please refrain from adjusting filters.")
@@ -313,6 +311,9 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     progress_bar.progress(100)
     progress_text.text("✅ All tracks uploaded successfully!")
     return {"status": "success"}
+
+
+from app import start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range, selected_popularity, selected_genres, is_any_filter_different
 
 def create_playlist_from_dataframe(unique_songs):
     query_params = st.query_params
