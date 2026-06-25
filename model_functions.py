@@ -3,7 +3,8 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
-import torch, requests, io, urllib.parse
+import torch, requests, io, urllib.parse, base64
+from app import start_date, end_date, selected_artists, collaboration_choice, selected_album_types, duration_range, selected_popularity, selected_genres, is_any_filter_different
 
 def message():
     st.error("Please reload the application and allow 3–4 minutes (6-7 minutes if your internet speed is slow i.e below 40 MBPS) for the dashboard to fully initialize the Baseline Market. Avoid changing sidebar filters during this process.")
@@ -232,17 +233,55 @@ def get_spotify_user_info(token: str):
         st.error(f"Failed to fetch user info: {response.text}")
         return None
 
+# Build playlist description dynamically
+def build_playlist_description(start_date, end_date, selected_artists, collaboration_choice, selected_album_types,
+                                duration_range, selected_popularity, selected_genres, is_any_filter_different):
+    if not is_any_filter_different:
+        return "Generated from Streamlit dashboard"
+
+    description_parts = [
+        f"Date Range: {start_date} to {end_date}",
+        f"Artists: {', '.join(selected_artists) if selected_artists else 'All'}",
+        f"Track Type: {collaboration_choice}",
+        f"Album Types: {', '.join(selected_album_types) if selected_album_types else 'All'}",
+        f"Duration: {duration_range[0]}–{duration_range[1]} minutes",
+        f"Popularity: {selected_popularity[0]}–{selected_popularity[1]}",
+        f"Genres: {', '.join(selected_genres) if selected_genres else 'All'}"
+    ]
+
+    return "Playlist generated with filters → " + " | ".join(description_parts)
+
 # Create playlist (modern endpoint)
-def create_spotify_playlist(token, name="UK Dashboard Playlist"):
+def create_spotify_playlist(token, name, description):
     url = "https://api.spotify.com/v1/me/playlists"
-    payload = {"name": name, "description": "Generated from Streamlit dashboard", "public": False}
+    payload = {"name": name, "description": description, "public": False}
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.post(url, json=payload, headers=headers)
     st.info(f"Playlist info: {response.json()}")
     return response.json()
 
+def upload_playlist_cover(playlist_id, image_path, token):
+    # Convert PNG → JPEG in memory
+    img = Image.open(image_path).convert("RGB")
+    from io import BytesIO
+    buffer = BytesIO()
+    img.save(buffer, format="JPEG")
+    encoded_image = base64.b64encode(buffer.getvalue())
+
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/images"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "image/jpeg"
+    }
+    response = requests.put(url, data=encoded_image, headers=headers)
+
+    if response.status_code == 202:
+        st.success("🎨 Playlist cover uploaded successfully!")
+    else:
+        st.error(f"Failed to upload cover: {response.json()}")
+
 def add_tracks_to_playlist(playlist_id, track_uris, token):
-    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/items" # Since /tracks is deprecated
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -333,13 +372,41 @@ def create_playlist_from_dataframe(unique_songs):
             return
 
         # Create playlist
+        # 🎤 Ask for playlist name in a modal if filters changed
+        playlist_name = "United Kingdom Dashboard Playlist"
+        if is_any_filter_different:
+            with st.form("playlist_name_form", clear_on_submit=True):
+                st.write("📝 Please enter a name for your playlist:")
+                playlist_name = "United Kingdom Dashboard Playlist Filtered"
+                # Show default name in the input field
+                playlist_name_input = st.text_input(
+                    "Playlist name",
+                    value=playlist_name  # ✅ default pre-filled
+                )
+                
+                submitted = st.form_submit_button("Confirm")
+                if submitted:
+                    playlist_name = playlist_name_input.strip() or playlist_name
+                else:
+                    st.warning("Playlist name required to continue.")
+                    return
+                
+        playlist_description = build_playlist_description(
+            start_date, end_date,
+            selected_artists, collaboration_choice,
+            selected_album_types, duration_range,
+            selected_popularity, selected_genres,
+            is_any_filter_different
+        )
+        
         progress_text.text("🎶 Step 2/3: Creating playlist...")
-        playlist = create_spotify_playlist(access_token)
+        playlist = create_spotify_playlist(access_token, name=playlist_name, description=playlist_description)
         progress_bar.progress(40)
         if "id" not in playlist:
             st.error(f"Failed to create playlist: {playlist}")
             return
         playlist_id = playlist["id"]
+        upload_playlist_cover(playlist_id, "static/Livestream_symbol.png", access_token)
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
@@ -377,22 +444,12 @@ def create_playlist_from_dataframe(unique_songs):
 
         # Show owner info
         st.markdown(f"👤 Playlist owner: **{user_info.get('display_name', user_info.get('id'))}**")
-        st.markdown(f"💡 Account type: **{user_info.get('product', 'Unknown')}**")
-
+        
         st.markdown(
             f"""
             <a href="https://open.spotify.com/playlist/{playlist_id}" target="_blank">
-                <button style="background-color:#1DB954;
-                            border:none;
-                            color:white;
-                            padding:10px 20px;
-                            text-align:center;
-                            text-decoration:none;
-                            display:inline-block;
-                            font-size:16px;
-                            border-radius:20px;
-                            cursor:pointer;">
-                    🎧 Open Playlist in Spotify
+                <button style="background-color:#1DB954; border:none; color:white; padding:10px 20px; text-align:center; 
+                    text-decoration:none; display:inline-block; font-size:16px; border-radius:20px; cursor:pointer;"> 🎧 Open Playlist in Spotify
                 </button>
             </a>
             """,
@@ -437,8 +494,35 @@ def create_playlist_button(unique_songs):
             return
 
         # Step 3: Create playlist
+        # 🎤 Ask for playlist name in a modal if filters changed
+        playlist_name = "United Kingdom Dashboard Playlist"
+        if is_any_filter_different:
+            with st.form("playlist_name_form", clear_on_submit=True):
+                st.write("📝 Please enter a name for your playlist:")
+                playlist_name = "United Kingdom Dashboard Playlist Filtered"
+                # Show default name in the input field
+                playlist_name_input = st.text_input(
+                    "Playlist name",
+                    value=playlist_name  # ✅ default pre-filled
+                )
+                
+                submitted = st.form_submit_button("Confirm")
+                if submitted:
+                    playlist_name = playlist_name_input.strip() or playlist_name
+                else:
+                    st.warning("Playlist name required to continue.")
+                    return
+                
+        playlist_description = build_playlist_description(
+            start_date, end_date,
+            selected_artists, collaboration_choice,
+            selected_album_types, duration_range,
+            selected_popularity, selected_genres,
+            is_any_filter_different
+        )
+        
         progress_text.text("🎶 Creating playlist...")
-        playlist = create_spotify_playlist(access_token)
+        playlist = create_spotify_playlist(access_token, playlist_name, playlist_description)
         progress_bar.progress(40)
         if "id" not in playlist:
             st.error("Failed to create playlist")

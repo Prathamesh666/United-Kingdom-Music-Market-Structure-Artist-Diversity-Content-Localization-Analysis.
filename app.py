@@ -358,7 +358,7 @@ print("--- All required dataframes and variables are now prepared. ---")
 
 tab1, tab2, tab3 = st.tabs(["UK Music Market Structural Analysis", 
                     "Recommendational Analysis for UK's Music Listeners", "Music Streaming for All Music Listeners"])
-        
+
 with tab3:
     # Header row with symbol + title
     col1, col2 = st.columns([1,9])
@@ -398,7 +398,6 @@ with tab3:
     choices = filtered.sort_values(by="song").apply(lambda r: f"{r['song']} — {r['artist']}", axis=1)
     st.success(f"Total Songs: {len(choices)}")
     selected = st.selectbox("🎶 Choose a song to play:", choices)   
-    # Find the row for the selected song
     row = filtered[filtered.apply(lambda r: f"{r['song']} — {r['artist']}", axis=1) == selected].iloc[0]
     
     song, artist = selected.split(" — ")
@@ -411,45 +410,42 @@ with tab3:
         api_key = st.secrets.get("Api_Key")
         if api_key:
             video_id = get_youtube_video_id(song, artist, api_key)
-            if video_id:
+            if video_id and video_id != "None":
                 st.video(f"https://www.youtube.com/watch?v={video_id}")
             else:
                 st.warning("No official video found.")
         else:
             st.warning("YouTube API key not configured.")
-            
-    #create_playlist_button(unique_songs)
-    create_playlist_from_dataframe(unique_songs)
-            
-    try:
-        # Spotify setup
-        token = get_spotify_token_cached()
-        headers = {"Authorization": f"Bearer {token}"}
-        result = search_spotify_track(song, artist, headers)
-            
-        if result is not None:
-            track_id, preview_url = result
-    
-            with col_audio:
-                if track_id:
-                    spotify_embed = f"""
-                    <iframe src="https://open.spotify.com/embed/track/{track_id}" 
-                    width="100%" height="100%" frameborder="0" allowtransparency="true" 
-                    allow="encrypted-media"></iframe>
-                    """
-                    st.iframe(spotify_embed)
-                elif preview_url:
-                    st.audio(preview_url, format="audio/mp3")
-    except:
-        st.warning("Try again later: Bad Luck")
-        
+
+    # Spotify setup
+    #try:
+    #    token = get_spotify_token_cached()
+    #    headers = {"Authorization": f"Bearer {token}"}
+    #    result = search_spotify_track(song, artist, headers)
+    #        
+    #    if result is not None:
+    #        track_id, preview_url = result
+    #        with col_audio:
+    #            if track_id:
+    #                spotify_embed = f"""
+    #                <iframe src="https://open.spotify.com/embed/track/{track_id}" 
+    #                width="100%" height="100%" frameborder="0" allowtransparency="true" 
+    #                allow="encrypted-media"></iframe>
+    #                """
+    #                st.iframe(spotify_embed)
+    #            elif preview_url:
+    #                st.audio(preview_url, format="audio/mp3")
+    #except:
+    #    st.warning("Try again later: Bad Luck")
+
     st.divider()
+    st.subheader("📀 Create a Spotify Playlist")
+    # Single call to playlist creation
+    create_playlist_from_dataframe(unique_songs)
+    
     # Banner
     st.image("static/Livestream_banner.png")
-    
-    st.subheader("📀 Create a Spotify Playlist")
-    #create_playlist_from_dataframe(unique_songs)
-    
+
 with tab1:
     st.balloons()
     st.title('United Kingdom Music Market Structural Analysis')
