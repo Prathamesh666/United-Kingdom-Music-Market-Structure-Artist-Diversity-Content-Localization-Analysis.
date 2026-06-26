@@ -418,25 +418,25 @@ with tab3:
             st.warning("YouTube API key not configured.")
 
     # Spotify setup
-    #try:
-    #    token = get_spotify_token_cached()
-    #    headers = {"Authorization": f"Bearer {token}"}
-    #    result = search_spotify_track(song, artist, headers)
-    #        
-    #    if result is not None:
-    #        track_id, preview_url = result
-    #        with col_audio:
-    #            if track_id:
-    #                spotify_embed = f"""
-    #                <iframe src="https://open.spotify.com/embed/track/{track_id}" 
-    #                width="100%" height="100%" frameborder="0" allowtransparency="true" 
-    #                allow="encrypted-media"></iframe>
-    #                """
-    #                st.iframe(spotify_embed)
-    #            elif preview_url:
-    #                st.audio(preview_url, format="audio/mp3")
-    #except:
-    #    st.warning("Try again later: Bad Luck")
+    try:
+        token = get_spotify_token_cached()
+        headers = {"Authorization": f"Bearer {token}"}
+        result = search_spotify_track(song, artist, headers)
+            
+        if result is not None:
+            track_id, preview_url = result
+            with col_audio:
+                if track_id:
+                    spotify_embed = f"""
+                    <iframe src="https://open.spotify.com/embed/track/{track_id}" 
+                    width="100%" height="100%" frameborder="0" allowtransparency="true" 
+                    allow="encrypted-media"></iframe>
+                    """
+                    st.iframe(spotify_embed)
+                elif preview_url:
+                    st.audio(preview_url, format="audio/mp3")
+    except:
+        st.warning("Try again later: Bad Luck")
 
     st.divider()
     st.subheader("📀 Create a Spotify Playlist")
