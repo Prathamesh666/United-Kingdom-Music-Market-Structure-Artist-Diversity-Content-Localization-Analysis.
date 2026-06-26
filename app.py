@@ -444,32 +444,32 @@ with tab3:
     except:
         st.warning("Try again later: Bad Luck")
 
-    st.divider()
-    st.subheader("📀 Create a Spotify Playlist")
-    with st.expander("📝 Steps to Create Your Playlist", expanded=True):
-        st.markdown(
-        """
-        <div style="text-align: center;">
-            Before Login 🔑: You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
-            1. Select filters → date range, album types, popularity, duration.
-            2. Decide if the playlist should be collaborative.
-            3. Review your selections.
-
-            During Login 🔐: You are on 'https://accounts.spotify.com/authorize' 
-            - Accept the required <b>Spotify scopes/permissions</b> shown in the login window 
-            (e.g. playlist‑modify‑public, playlist‑modify‑private).
-            - Without granting these, playlist creation will not work.
-
-            After Login ✅: You are redirected to 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/?code=Your_Auth_Code'
-            4. Click the button below to generate your personalized playlist.
-            5. Wait for sometime & open it directly in Spotify and enjoy your mix!
-        </div>
-        """,
-        unsafe_allow_html=True
-        )
-
-    create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
-                                selected_popularity, is_any_filter_different)
+    #st.divider()
+    #st.subheader("📀 Create a Spotify Playlist")
+    #with st.expander("📝 Steps to Create Your Playlist", expanded=True):
+    #    st.markdown(
+    #    """
+    #    <div style="text-align: center;">
+    #        Before Login 🔑: You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
+    #        1. Select filters → date range, album types, popularity, duration.
+    #        2. Decide if the playlist should be collaborative.
+    #        3. Review your selections.
+#
+    #        During Login 🔐: You are on 'https://accounts.spotify.com/authorize' 
+    #        - Accept the required <b>Spotify scopes/permissions</b> shown in the login window 
+    #        (e.g. playlist‑modify‑public, playlist‑modify‑private).
+    #        - Without granting these, playlist creation will not work.
+#
+    #        After Login ✅: You are redirected to 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/?code=Your_Auth_Code'
+    #        4. Click the button below to generate your personalized playlist.
+    #        5. Wait for sometime & open it directly in Spotify and enjoy your mix!
+    #    </div>
+    #    """,
+    #    unsafe_allow_html=True
+    #    )
+#
+    #create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+    #                            selected_popularity, is_any_filter_different)
 
     # Banner
     st.divider()
