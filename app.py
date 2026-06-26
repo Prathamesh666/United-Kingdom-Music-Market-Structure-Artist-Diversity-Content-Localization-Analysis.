@@ -373,12 +373,17 @@ with tab3:
     # Deduplicate songs
     unique_songs = (
         filtered_df
-        .groupby("song")
+        .assign(
+            song_norm = filtered_df["song"].str.strip().str.lower(),
+            artist_norm = filtered_df["artist"].str.strip().str.lower()
+        )
+        .groupby("song_norm")
         .agg({
-            "artist": lambda x: ", ".join(sorted(set(x))),
+            "song": "first",
+            "artist": lambda x: ", ".join(sorted(set(x.str.title()))),
             "album_cover_url": "first"  # keep one representative cover
         })
-        .reset_index()
+        .reset_index(drop=True)
     )
 
     # Search bar
@@ -445,21 +450,19 @@ with tab3:
         st.markdown(
         """
         <div style="text-align: center;">
-            <h4>📝 Steps to Create Your Playlist</h4>
+            Before Login 🔑: You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
+            1. Select filters → date range, album types, popularity, duration.
+            2. Decide if the playlist should be collaborative.
+            3. Review your selections.
 
-            <b>Before Login 🔑: </b><br>You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
-            1. Select filters → date range, album types, popularity, duration.<br>
-            2. Decide if the playlist should be collaborative.<br>
-            3. Review your selections.<br><br>
-
-            <b>During Login 🔐: </b><br>You are on 'https://accounts.spotify.com/authorize' 
+            During Login 🔐: You are on 'https://accounts.spotify.com/authorize' 
             - Accept the required <b>Spotify scopes/permissions</b> shown in the login window 
-            (e.g. playlist‑modify‑public, playlist‑modify‑private).<br>
-            - Without granting these, playlist creation will not work.<br><br>
+            (e.g. playlist‑modify‑public, playlist‑modify‑private).
+            - Without granting these, playlist creation will not work.
 
-            <b>After Login ✅: </b><br>You are redirected to 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/?code=Your_Auth_Code'
-            4. Click the button below to generate your personalized playlist.<br>
-            5. Wait for sometime & open it directly in Spotify and enjoy your mix!<br>
+            After Login ✅: You are redirected to 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/?code=Your_Auth_Code'
+            4. Click the button below to generate your personalized playlist.
+            5. Wait for sometime & open it directly in Spotify and enjoy your mix!
         </div>
         """,
         unsafe_allow_html=True
