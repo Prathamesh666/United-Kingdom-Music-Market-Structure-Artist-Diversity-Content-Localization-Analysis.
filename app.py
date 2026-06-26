@@ -440,34 +440,49 @@ with tab3:
 
     st.divider()
     st.subheader("📀 Create a Spotify Playlist")
-    st.markdown(
+    with st.expander("📝 Steps to Create Your Playlist", expanded=True):
+        st.markdown(
         """
-        ### 📝 Steps to Create Your Playlist
-    
-        **Before Login 🔑**
-        1. Select filters → date range, album types, popularity, duration.
-        2. Decide if the playlist should be collaborative.
-        3. Review your selections.
-    
-        **During Login 🔐**
-        - Accept the required **Spotify scopes/permissions** shown in the login window (e.g. playlist‑modify‑public, playlist‑modify‑private).  
-        - Without granting these, playlist creation will not work.
-    
-        **After Login ✅**
-        4. Click the button below to generate your personalized playlist.
-        5. Wait for sometime & Open it directly in Spotify and enjoy your mix!
-        """, unsafe_allow_html=True
-    )
+        <div style="text-align: center;">
+            <h4>📝 Steps to Create Your Playlist</h4>
+
+            <b>Before Login 🔑: </b><br>You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
+            1. Select filters → date range, album types, popularity, duration.<br>
+            2. Decide if the playlist should be collaborative.<br>
+            3. Review your selections.<br><br>
+
+            <b>During Login 🔐: </b><br>You are on 'https://accounts.spotify.com/authorize' 
+            - Accept the required <b>Spotify scopes/permissions</b> shown in the login window 
+            (e.g. playlist‑modify‑public, playlist‑modify‑private).<br>
+            - Without granting these, playlist creation will not work.<br><br>
+
+            <b>After Login ✅: </b><br>You are redirected to 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/?code=Your_Auth_Code'
+            4. Click the button below to generate your personalized playlist.<br>
+            5. Wait for sometime & open it directly in Spotify and enjoy your mix!<br>
+        </div>
+        """,
+        unsafe_allow_html=True
+        )
+
     create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different)
 
     # Banner
+    st.divider()
+    st.image("static/Livestream_banner.png")
     st.markdown(
         """
-        <div style="width:100%;">
-            <img src="static/Livestream_banner.png" style="width:100%; height:auto;">
-        </div>
-        """, unsafe_allow_html=True
+        <style>
+        [data-testid="stImage"] img {
+            width: 100% !important;
+            height: auto !important;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
     )
 
 with tab1:
