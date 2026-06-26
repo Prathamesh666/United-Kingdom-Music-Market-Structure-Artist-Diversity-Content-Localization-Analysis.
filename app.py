@@ -406,6 +406,7 @@ with tab3:
     col_audio, col_video = st.columns([1,2.25])
     with col_audio:
         st.markdown(f"🔗 [Album Cover Link]({row['album_cover_url']})")
+        st.image( row['album_cover_url'], caption=f"{row['song']} — {row['artist']}", width='stretch' )
     with col_video:
         api_key = st.secrets.get("Api_Key")
         if api_key:

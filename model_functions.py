@@ -147,6 +147,9 @@ def search_spotify_track(song, artist, headers):
     if response.status_code == 429:
         retry_after = int(response.headers.get("Retry-After", 5))
         st.warning(f"Rate limit hit. Retrying after {retry_after} seconds...")
+        st.warning("Spotify rate limit hit. Redirecting you to the already created playlist instead.")
+        default_playlist_url = "https://open.spotify.com/playlist/1wb5ZJx6mUUlxDhvEfX8OH?si=TeiA_Z-xQgmDw-WGdfAEhg"
+        st.markdown(f"🎶 [Open Playlist]({default_playlist_url})")
         time.sleep(retry_after)
         response = requests.get(url, headers=headers)
     if response.status_code != 200:
