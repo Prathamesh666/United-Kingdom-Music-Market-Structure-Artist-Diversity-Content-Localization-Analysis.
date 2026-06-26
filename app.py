@@ -379,7 +379,7 @@ with tab3:
         )
         .groupby("song_norm")
         .agg({
-            "song": "first",
+            "song": lambda x: x.iloc[0].title(),
             "artist": lambda x: ", ".join(sorted(set(x.str.title()))),
             "album_cover_url": "first"  # keep one representative cover
         })
@@ -419,7 +419,7 @@ with tab3:
             if video_id and video_id != "None":
                 st.video(f"https://www.youtube.com/watch?v={video_id}")
             else:
-                st.warning("No official video found.")
+                st.warning("No official video found at instance. Try again later!")
         else:
             st.warning("YouTube API key not configured.")
 

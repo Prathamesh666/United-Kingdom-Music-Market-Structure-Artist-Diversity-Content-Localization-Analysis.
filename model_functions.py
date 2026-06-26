@@ -181,7 +181,7 @@ def get_youtube_video_id(song: str, artist: str, api_key: str) -> str:
         "part": "snippet",
         "q": query,
         "type": "video",
-        "videoCategoryId": "10",   # Music category
+        #"videoCategoryId": "10",   # Music category
         "maxResults": 1,
         "key": api_key
     }
@@ -258,27 +258,6 @@ def create_spotify_playlist(token, name, description):
     response = requests.post(url, json=payload, headers=headers)
     with st.expander("Playlist Information: "): st.info(f"Playlist info: {response.json()}")
     return response.json()
-
-def upload_playlist_cover(playlist_id, image_path, token):
-    # Convert PNG → JPEG in memory
-    img = Image.open(image_path).convert("RGB")
-    img = img.resize((640, 640))
-    from io import BytesIO
-    buffer = BytesIO()
-    img.save(buffer, format="JPEG")
-    encoded_image = base64.b64encode(buffer.getvalue())
-
-    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/images"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "image/jpeg"
-    }
-    response = requests.put(url, data=encoded_image, headers=headers)
-
-    if response.status_code == 202:
-        st.success("🎨 Playlist cover uploaded successfully!")
-    else:
-        st.error(f"Failed to upload cover: {response.json()}")
 
 def add_tracks_to_playlist(playlist_id, track_uris, token):
     url = f"https://api.spotify.com/v1/playlists/{playlist_id}/items" # Since /tracks is deprecated
