@@ -150,6 +150,7 @@ def search_spotify_track(song, artist, headers):
         st.warning("Spotify rate limit hit. Redirecting you to the already created playlist instead.")
         default_playlist_url = "https://open.spotify.com/playlist/1wb5ZJx6mUUlxDhvEfX8OH?si=TeiA_Z-xQgmDw-WGdfAEhg"
         st.markdown(f"🎶 [Open Playlist]({default_playlist_url})")
+        st.success("Come Again Tomorrow to See The Updated Playlist! Bye")
         time.sleep(retry_after)
         response = requests.get(url, headers=headers)
     if response.status_code != 200:
