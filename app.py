@@ -450,6 +450,7 @@ with tab3:
         st.markdown(
         """
         <div style="text-align: center;">
+        
             Before Login 🔑: You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
             1. Select filters → date range, album types, popularity, duration.
             2. Decide if the playlist should be collaborative.
