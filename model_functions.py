@@ -388,7 +388,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         import json
 
         track_uris = []
-        subset = unique_songs.iloc[666:688]   # first 690 songs
+        subset = unique_songs.iloc[666:]   # first 690 songs
         
         for i, (_, row) in enumerate(subset.iterrows(), start=667):
             track_id = search_spotify_track(
