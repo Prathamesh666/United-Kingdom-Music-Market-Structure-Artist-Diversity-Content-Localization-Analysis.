@@ -363,34 +363,15 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         if "id" not in playlist:
             st.error(f"Failed to create playlist: {playlist}")
             return
-        playlist_id = "1wb5ZJx6mUUlxDhvEfX8OH" #playlist["id"]
+        playlist_id = playlist["id"]
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         track_uris = []
-        #total = len(unique_songs)
+        total = len(unique_songs)
         st.write(f"Scope: {st.session_state.get('scope')}")
         
-        #for i, (_, row) in enumerate(unique_songs.iterrows()):
-        #    track_id = search_spotify_track(
-        #        row["song"], row["artist"],
-        #        {"Authorization": f"Bearer {access_token}"}
-        #    )
-        #    
-        #    if track_id:  
-        #        track_uris.append(f"spotify:track:{track_id[0]}")
-        #
-        #    # update progress bar gradually
-        #    percent_complete = 40 + int(60 * (i+1)/total)
-        #    progress_bar.progress(percent_complete)
-        #    progress_text.text(f"Searching track {i+1}/{total}...")
-            
-        import json
-
-        track_uris = []
-        subset = unique_songs.iloc[666:]   # first 690 songs
-        
-        for i, (_, row) in enumerate(subset.iterrows(), start=667):
+        for i, (_, row) in enumerate(unique_songs.iterrows()):
             track_id = search_spotify_track(
                 row["song"], row["artist"],
                 {"Authorization": f"Bearer {access_token}"}
@@ -398,29 +379,43 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
             
             if track_id:  
                 track_uris.append(f"spotify:track:{track_id[0]}")
-            
-            # progress bar update
-            #percent_complete = 40 + int(60 * (i+1)/len(subset))
-            #progress_bar.progress(percent_complete)
-            #progress_text.text(f"Searching track {i+1}/{len(subset)}...")
-            # progress bar update
-            percent_complete = int(100 * (i-666)/len(subset))
+        
+            # update progress bar gradually
+            percent_complete = 40 + int(60 * (i+1)/total)
             progress_bar.progress(percent_complete)
-            progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
+            progress_text.text(f"Searching track {i+1}/{total}...")
             
-        
-        # ✅ Save locally
-        with open("track_uris_day1.1.json", "w") as f:
-            json.dump(track_uris, f)
-        
-        st.success(f"Saved {len(track_uris)} URIs to track_uris_day1.json")
-        # ✅ Provide download button
-        st.download_button(
-            label="Download Day 1 Track URIs",
-            data=json.dumps(track_uris, indent=2),
-            file_name="track_uris_day1.1.json",
-            mime="application/json"
-        )
+        #import json
+#
+        #track_uris = []
+        #subset = unique_songs.iloc[666:]   # first 690 songs
+        #
+        #for i, (_, row) in enumerate(subset.iterrows(), start=667):
+        #    track_id = search_spotify_track(
+        #        row["song"], row["artist"],
+        #        {"Authorization": f"Bearer {access_token}"}
+        #    )
+        #    
+        #    if track_id:  
+        #        track_uris.append(f"spotify:track:{track_id[0]}")
+        #    
+        #    percent_complete = int(100 * (i-666)/len(subset))
+        #    progress_bar.progress(percent_complete)
+        #    progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
+        #    
+        #
+        ## ✅ Save locally
+        #with open("track_uris_day_2.json", "w") as f:
+        #    json.dump(track_uris, f)
+        #
+        #st.success(f"Saved {len(track_uris)} URIs to track_uris_day1.json")
+        ## ✅ Provide download button
+        #st.download_button(
+        #    label="Download Day 1 Track URIs",
+        #    data=json.dumps(track_uris, indent=2),
+        #    file_name="track_uris_day_2.json",
+        #    mime="application/json"
+        #)
         
         # Debug check
         # Clean up track_uris before sending
