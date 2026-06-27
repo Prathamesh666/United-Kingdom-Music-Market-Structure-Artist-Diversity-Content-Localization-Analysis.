@@ -181,7 +181,7 @@ def get_youtube_video_id(song: str, artist: str, api_key: str) -> str:
         "part": "snippet",
         "q": query,
         "type": "video",
-        #"videoCategoryId": "10",   # Music category
+        "videoCategoryId": "10",   # Music category
         "maxResults": 1,
         "key": api_key
     }
