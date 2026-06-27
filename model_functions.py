@@ -409,6 +409,13 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
             json.dump(track_uris, f)
         
         st.success(f"Saved {len(track_uris)} URIs to track_uris_day1.json")
+        # ✅ Provide download button
+        st.download_button(
+            label="Download Day 1 Track URIs",
+            data=json.dumps(track_uris, indent=2),
+            file_name="track_uris_day1.json",
+            mime="application/json"
+        )
         
         # Debug check
         # Clean up track_uris before sending
