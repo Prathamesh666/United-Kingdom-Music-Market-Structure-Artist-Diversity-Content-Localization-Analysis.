@@ -28,13 +28,14 @@ def inject_ga():
     GA_ID = "G-H7VP3CYEPB"  # Your actual Tracking ID
 
     GA_JS = f"""
+    <meta name="google-site-verification" content="8qhJewqcfQuP-HpMtrPOHyc72ENL1xOzBI_THkMVHKo" />
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H7VP3CYEPB"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){{dataLayer.push(arguments);}}
+        function gtag(){{window.dataLayer.push(arguments);}}
         gtag('js', new Date());
-        gtag('config', '{GA_ID}');
+        gtag('config', 'G-H7VP3CYEPB');
     </script>
     """
 
