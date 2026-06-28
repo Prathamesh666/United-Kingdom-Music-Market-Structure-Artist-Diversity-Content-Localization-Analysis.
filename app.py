@@ -20,6 +20,19 @@ from tqdm.auto import tqdm # For progress_apply
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
+import streamlit as st
+import streamlit.components.v1 as components
+
+GA_TRACKING_ID = st.secrets.get('GA_TRACKING_ID')
+
+ga_script = f"""
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_TRACKING_ID}"></script>
+<script> window.dataLayer = window.dataLayer || []; function gtag(){{dataLayer.push(arguments);}} gtag('js', new Date()); gtag('config', '{GA_TRACKING_ID}');
+</script>
+"""
+
+components.html(ga_script, height=0, width=0)
 
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
 st.logo("static/banner.png")
@@ -329,10 +342,10 @@ is_any_filter_different = (
 
 try:
     if not is_any_filter_different:
-        st.session_state["baseline_total"] = len(unique_album_covers)
-        baseline_total = len(unique_album_covers)
+        st.session_state["baseline_total"] = len(filtered_df['song'].dropna().unique())
+        baseline_total = st.session_state["baseline_total"]
     else:
-        current_total = len(filtered_df['album_cover_url'].dropna().unique())
+        current_total = len(filtered_df['song'].dropna().unique())
         delta = current_total - st.session_state["baseline_total"]
         
         if delta >= 0:
