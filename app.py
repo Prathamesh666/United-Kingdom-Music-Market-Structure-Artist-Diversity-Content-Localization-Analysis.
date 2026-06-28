@@ -21,10 +21,24 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
 
-st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
+st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide", menu_items={ 'About': "Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations."})
 st.logo("static/banner.png")
 st.sidebar.image("static/banner.png")
 st.header("🎵 Welcome to the United Kingdom's Music Market Dashboard!")
+st.markdown(
+    """
+    <meta name="google-site-verification" content="8qhJewqcfQuP-HpMtrPOHyc72ENL1xOzBI_THkMVHKo" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H7VP3CYEPB"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+    
+        gtag('config', 'G-H7VP3CYEPB');
+    </script>
+    """, unsafe_allow_html=True
+)
 st.markdown("""
 Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations.  
 This dashboard uncovers patterns in **artist diversity, genre preferences, chart success, and listener behaviors**, helping you explore the forces shaping the Top tracks.  
