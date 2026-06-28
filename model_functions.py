@@ -145,12 +145,12 @@ def search_spotify_track(song, artist, headers):
     url = f"https://api.spotify.com/v1/search?q={query}&type=track&limit=1"
     response = requests.get(url, headers=headers)
     if response.status_code == 429:
-        retry_after = int(response.headers.get("Retry-After", 5))
-        st.warning(f"Rate limit hit. Retrying after {retry_after} seconds...")
-        st.warning("Spotify rate limit hit. Redirecting you to the already created playlist instead.")
+        retry_after = int(response.headers.get("Retry-After", 60000))
+        retry_after_min = int(retry_after/60)
+        retry_after_hours = float(retry_after_min/60)
+        st.warning(f"Spotify rate limit hit. Redirecting you to the already created playlist instead [Retry after {retry_after_min} minutes ({retry_after_hours} hours)....]")
         default_playlist_url = "https://open.spotify.com/playlist/4ar8iua1eZDmraYonUQDC0"
-        st.markdown(f"🎶 [Open Playlist]({default_playlist_url})")
-        st.success("Come Again Tomorrow to See The Full Updated Playlist! Bye")
+        st.success(f"🎶 [Open Playlist]({default_playlist_url})")
         response = requests.get(url, headers=headers)
     if response.status_code != 200:
         print("Spotify API error:", response.status_code, response.text)
