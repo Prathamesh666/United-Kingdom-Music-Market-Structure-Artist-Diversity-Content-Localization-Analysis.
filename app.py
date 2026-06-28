@@ -30,7 +30,7 @@ ga_script = f"""
 </script>
 """
 
-st.html(ga_script, width=0)
+st.html(ga_script, width='stretch')
 
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
 st.logo("static/banner.png")
