@@ -20,6 +20,21 @@ from tqdm.auto import tqdm # For progress_apply
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
+import streamlit.components.v1 as components
+
+ga_script = f"""
+<meta name="google-site-verification" content="8qhJewqcfQuP-HpMtrPOHyc72ENL1xOzBI_THkMVHKo" />
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-H7VP3CYEPB"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){{dataLayer.push(arguments);}}
+    gtag('js', new Date());
+    gtag('config', 'G-H7VP3CYEPB');
+</script>
+"""
+
+components.html(ga_script, height=0, width=0)
 
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide", menu_items={ 'About': "Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations."})
 st.logo("static/banner.png")
