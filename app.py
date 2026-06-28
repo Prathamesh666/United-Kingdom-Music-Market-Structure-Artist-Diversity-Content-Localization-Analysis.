@@ -352,12 +352,28 @@ is_any_filter_different = (
     or is_duration_filter_different or is_popularity_filter_different or is_genre_filter_different
 )
 
+# Deduplicate songs
+unique_songs = (
+    filtered_df
+    .assign(
+        song_norm = filtered_df["song"].str.strip().str.lower(),
+        artist_norm = filtered_df["artist"].str.strip().str.lower()
+    )
+    .groupby("song_norm")
+    .agg({
+        "song": lambda x: x.iloc[0].title(),
+        "artist": lambda x: ", ".join(sorted(set(x.str.title()))),
+        "album_cover_url": "first"  # keep one representative cover
+    })
+    .reset_index(drop=True)
+)
+
 try:
     if not is_any_filter_different:
-        st.session_state["baseline_total"] = len(filtered_df['song'].dropna().unique())
+        st.session_state["baseline_total"] = len(unique_songs)
         baseline_total = st.session_state["baseline_total"]
     else:
-        current_total = len(filtered_df['song'].dropna().unique())
+        current_total = len(unique_songs)
         delta = current_total - st.session_state["baseline_total"]
         
         if delta >= 0:
@@ -388,28 +404,12 @@ with tab3:
     # Header row with symbol + title
     col1, col2 = st.columns([1,9])
     with col1:
-        st.image("static/Livestream_symbol.png", width=80)
+        st.image("static/Livestream_symbol.png", width=96)
     with col2:
         st.header("🎵 United Kingdom's Music Streaming")
         st.balloons()
 
     st.divider()
-
-    # Deduplicate songs
-    unique_songs = (
-        filtered_df
-        .assign(
-            song_norm = filtered_df["song"].str.strip().str.lower(),
-            artist_norm = filtered_df["artist"].str.strip().str.lower()
-        )
-        .groupby("song_norm")
-        .agg({
-            "song": lambda x: x.iloc[0].title(),
-            "artist": lambda x: ", ".join(sorted(set(x.str.title()))),
-            "album_cover_url": "first"  # keep one representative cover
-        })
-        .reset_index(drop=True)
-    )
 
     # Search bar
     query = st.text_input("🔍 Search for a song or artist")
