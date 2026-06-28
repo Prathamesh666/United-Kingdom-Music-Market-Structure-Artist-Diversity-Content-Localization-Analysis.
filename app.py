@@ -20,57 +20,7 @@ from tqdm.auto import tqdm # For progress_apply
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
-import pathlib
-from bs4 import BeautifulSoup
-import shutil
 
-def inject_ga():
-    GA_ID = "G-H7VP3CYEPB"  # Your actual Tracking ID
-
-    GA_JS = f"""
-    <meta name="google-site-verification" content="8qhJewqcfQuP-HpMtrPOHyc72ENL1xOzBI_THkMVHKo" />
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H7VP3CYEPB"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){{window.dataLayer.push(arguments);}}
-        gtag('js', new Date());
-        gtag('config', 'G-H7VP3CYEPB');
-    </script>
-    """
-
-    # Path to Streamlit's index.html
-    index_path = pathlib.Path(__import__('streamlit').__file__).parent / "static" / "index.html"
-
-    # Backup original file
-    bck_index = index_path.with_name("index.bck")
-    if not bck_index.exists():
-        shutil.copy(index_path, bck_index)
-
-    # Parse with BeautifulSoup
-    soup = BeautifulSoup(index_path.read_text(), "html.parser")
-
-    # Only inject if GA_ID not already present
-    if GA_ID not in soup.prettify():
-        head_tag = soup.find("head")
-        ga_fragment = BeautifulSoup(GA_JS, "html.parser")
-        if head_tag is not None:
-            head_tag.insert(0, ga_fragment)
-        else:
-            # If no <head> tag found, create one and insert at top of document
-            new_head = soup.new_tag("head")
-            new_head.append(ga_fragment)
-            # Insert the new head before the first element or at beginning
-            if soup.contents:
-                soup.insert(0, new_head)
-            else:
-                soup.append(new_head)
-        index_path.write_text(str(soup))
-        print("✅ GA snippet injected into <head> successfully.")
-    else:
-        print("ℹ️ GA snippet already present.")
-
-inject_ga()
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
 st.logo("static/banner.png")
 st.sidebar.image("static/banner.png")
