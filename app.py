@@ -20,19 +20,45 @@ from tqdm.auto import tqdm # For progress_apply
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
+import pathlib
+from bs4 import BeautifulSoup
+import shutil
 
-GA_TRACKING_ID = st.secrets.get('GA_TRACKING_ID')
+def inject_ga():
+    GA_ID = "G-H7VP3CYEPB"  # Your actual Tracking ID
 
-ga_script = f"""
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={GA_TRACKING_ID}"></script>
-<script> window.dataLayer = window.dataLayer || []; function gtag(){{dataLayer.push(arguments);}} gtag('js', new Date()); gtag('config', '{GA_TRACKING_ID}');
-</script>
-<meta name="google-site-verification" content="8qhJewqcfQuP-HpMtrPOHyc72ENL1xOzBI_THkMVHKo" />
-"""
+    GA_JS = f"""
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){{dataLayer.push(arguments);}}
+        gtag('js', new Date());
+        gtag('config', '{GA_ID}');
+    </script>
+    """
 
-st.html(ga_script, width='stretch')
+    # Path to Streamlit's index.html
+    index_path = pathlib.Path(__import__('streamlit').__file__).parent / "static" / "index.html"
 
+    # Parse with BeautifulSoup
+    soup = BeautifulSoup(index_path.read_text(), features="html.parser")
+
+    # Only inject if GA_ID not already present
+    if GA_ID not in soup.prettify():
+        bck_index = index_path.with_suffix('.bck')
+        if bck_index.exists():
+            shutil.copy(bck_index, index_path)
+        else:
+            shutil.copy(index_path, bck_index)
+
+        html = str(soup)
+        new_html = html.replace('<head>', '<head>\n' + GA_JS)
+        index_path.write_text(new_html)
+        print("✅ GA snippet injected into <head> successfully.")
+    else:
+        print("ℹ️ GA snippet already present.")
+inject_ga()
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
 st.logo("static/banner.png")
 st.sidebar.image("static/banner.png")
