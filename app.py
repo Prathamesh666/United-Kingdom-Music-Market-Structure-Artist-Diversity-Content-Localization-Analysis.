@@ -17,12 +17,21 @@ from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.mixture import GaussianMixture
 from tqdm.auto import tqdm # For progress_apply
-import warnings, inject_tags
+import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
-# Google Analytics
-inject_tags.patch_streamlit_head()
 
+ga_tag = """
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H7VP3CYEPB"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-H7VP3CYEPB');
+    </script>
+    """
+st.html(ga_tag)
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide", menu_items={ 'About': "Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations."})
 st.logo("static/banner.png")
 st.sidebar.image("static/banner.png")
