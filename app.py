@@ -20,7 +20,6 @@ from tqdm.auto import tqdm # For progress_apply
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
-import streamlit.components.v1 as components
 
 GA_TRACKING_ID = st.secrets.get('GA_TRACKING_ID')
 
@@ -31,7 +30,7 @@ ga_script = f"""
 </script>
 """
 
-components.html(ga_script, height=0, width=0)
+st.html(ga_script, width=0)
 
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide")
 st.logo("static/banner.png")
