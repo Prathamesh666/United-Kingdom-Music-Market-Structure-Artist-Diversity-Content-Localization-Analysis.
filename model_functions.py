@@ -151,7 +151,6 @@ def search_spotify_track(song, artist, headers):
         default_playlist_url = "https://open.spotify.com/playlist/4ar8iua1eZDmraYonUQDC0"
         st.markdown(f"🎶 [Open Playlist]({default_playlist_url})")
         st.success("Come Again Tomorrow to See The Full Updated Playlist! Bye")
-        time.sleep(retry_after)
         response = requests.get(url, headers=headers)
     if response.status_code != 200:
         print("Spotify API error:", response.status_code, response.text)

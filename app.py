@@ -20,7 +20,6 @@ from tqdm.auto import tqdm # For progress_apply
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
-import streamlit as st
 import streamlit.components.v1 as components
 
 GA_TRACKING_ID = st.secrets.get('GA_TRACKING_ID')
