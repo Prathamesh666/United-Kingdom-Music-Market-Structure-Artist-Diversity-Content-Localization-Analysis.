@@ -148,9 +148,10 @@ def search_spotify_track(song, artist, headers):
         retry_after = int(response.headers.get("Retry-After", 60000))
         retry_after_min = int(retry_after/60)
         retry_after_hours = float(retry_after_min/60)
-        st.warning(f"Spotify rate limit hit. Redirecting you to the already created playlist instead [Retry after {retry_after_min} minutes ({retry_after_hours} hours)....]")
+        st.error(f"🚫 Spotify rate limit hit. Redirecting you to the already created playlist of baseline market instead [Retry after {retry_after_min} minutes ({retry_after_hours} hours)....]")
         default_playlist_url = "https://open.spotify.com/playlist/4ar8iua1eZDmraYonUQDC0"
         st.success(f"🎶 [Open Playlist]({default_playlist_url})")
+        st.session_state['playlist_disabled'] = True
         response = requests.get(url, headers=headers)
     if response.status_code != 200:
         print("Spotify API error:", response.status_code, response.text)
@@ -367,29 +368,10 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         track_uris = []
-        #total = len(unique_songs)
-        st.write(f"Scope: {st.session_state.get('scope')}")
+        total = len(unique_songs)
+        st.caption(f"Scope: {st.session_state.get('scope')}")
         
-        #for i, (_, row) in enumerate(unique_songs.iterrows()):
-        #    track_id = search_spotify_track(
-        #        row["song"], row["artist"],
-        #        {"Authorization": f"Bearer {access_token}"}
-        #    )
-        #    
-        #    if track_id:  
-        #        track_uris.append(f"spotify:track:{track_id[0]}")
-        #
-        #    # update progress bar gradually
-        #    percent_complete = 40 + int(60 * (i+1)/total)
-        #    progress_bar.progress(percent_complete)
-        #    progress_text.text(f"Searching track {i+1}/{total}...")
-            
-        import json
-
-        track_uris = []
-        subset = unique_songs.iloc[:600]   # first 600 songs
-        
-        for i, (_, row) in enumerate(subset.iterrows(), start=667):
+        for i, (_, row) in enumerate(unique_songs.iterrows()):
             track_id = search_spotify_track(
                 row["song"], row["artist"],
                 {"Authorization": f"Bearer {access_token}"}
@@ -397,24 +379,43 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
             
             if track_id:  
                 track_uris.append(f"spotify:track:{track_id[0]}")
-            
-            percent_complete = int(100 * (i-666)/len(subset))
-            progress_bar.progress(percent_complete)
-            progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
-            
         
-        # ✅ Save locally
-        with open("track_uris_day_2.json", "w") as f:
-            json.dump(track_uris, f)
+            # update progress bar gradually
+            percent_complete = 40 + int(60 * (i+1)/total)
+            progress_bar.progress(percent_complete)
+            progress_text.text(f"Searching track {i+1}/{total}...")
+            
+        #import json
+#
+        #track_uris = []
+        #subset = unique_songs.iloc[:600]   # first 600 songs
+        #
+        #for i, (_, row) in enumerate(subset.iterrows(), start=667):
+        #    track_id = search_spotify_track(
+        #        row["song"], row["artist"],
+        #        {"Authorization": f"Bearer {access_token}"}
+        #    )
+        #    
+        #    if track_id:  
+        #        track_uris.append(f"spotify:track:{track_id[0]}")
+        #    
+        #    percent_complete = int(100 * (i-666)/len(subset))
+        #    progress_bar.progress(percent_complete)
+        #    progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
+        #    
+        #
+        ## ✅ Save locally
+        #with open("track_uris_day_2.json", "w") as f:
+        #    json.dump(track_uris, f)
         
         st.success(f"Saved {len(track_uris)} URIs to track_uris_day1.json")
         # ✅ Provide download button
-        st.download_button(
-            label="Download Day 1 Track URIs",
-            data=json.dumps(track_uris, indent=2),
-            file_name="track_uris_day_2.json",
-            mime="application/json"
-        )
+        #st.download_button(
+        #    label="Download Day 1 Track URIs",
+        #    data=json.dumps(track_uris, indent=2),
+        #    file_name="track_uris_day_2.json",
+        #    mime="application/json"
+        #)
         
         # Debug check
         # Clean up track_uris before sending
@@ -422,7 +423,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         add_tracks_to_playlist(playlist_id, track_uris, access_token)
         progress_bar.progress(100)
         progress_text.text("✅ Playlist created successfully!")
-        st.success("Playlist created successfully!")
+        st.success(f"🎉 Congratulations {user_info.get('display_name', user_info.get('id'))}, you are today’s lucky user! Your playlist is being created successfully")
 
         # Show owner info
         st.markdown(

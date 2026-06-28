@@ -449,25 +449,25 @@ with tab3:
             st.warning("YouTube API key not configured.")
 
     # Spotify setup
-    #try:
-    #    token = get_spotify_token_cached()
-    #    headers = {"Authorization": f"Bearer {token}"}
-    #    result = search_spotify_track(song, artist, headers)
-    #        
-    #    if result is not None:
-    #        track_id, preview_url = result
-    #        with col_audio:
-    #            if track_id:
-    #                spotify_embed = f"""
-    #                <iframe src="https://open.spotify.com/embed/track/{track_id}" 
-    #                width="100%" height="100%" frameborder="0" allowtransparency="true" 
-    #                allow="encrypted-media"></iframe>
-    #                """
-    #                st.iframe(spotify_embed)
-    #            elif preview_url:
-    #                st.audio(preview_url, format="audio/mp3")
-    #except:
-    #    st.warning("Try again later: Bad Luck")
+    try:
+        token = get_spotify_token_cached()
+        headers = {"Authorization": f"Bearer {token}"}
+        result = search_spotify_track(song, artist, headers)
+            
+        if result is not None:
+            track_id, preview_url = result
+            with col_audio:
+                if track_id:
+                    spotify_embed = f"""
+                    <iframe src="https://open.spotify.com/embed/track/{track_id}" 
+                    width="100%" height="100%" frameborder="0" allowtransparency="true" 
+                    allow="encrypted-media"></iframe>
+                    """
+                    st.iframe(spotify_embed)
+                elif preview_url:
+                    st.audio(preview_url, format="audio/mp3")
+    except:
+        st.warning("Try again later: Bad Luck")
 
     st.divider()
     st.subheader("📀 Create a Spotify Playlist")
@@ -475,6 +475,11 @@ with tab3:
         st.markdown(
         """
         <div style="text-align: center;">
+        
+            ⚡ **Lucky User Rule** ⚡  
+            - Only the first few lucky users each day can create a playlist.  
+            - Spotify allows max **690 searches per day**.  
+            - If the rate limit is hit, playlist creation is disabled until tomorrow.  
         
             Before Login 🔑: You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
             1. Select filters → date range, album types, popularity, duration.
@@ -493,9 +498,19 @@ with tab3:
         """,
         unsafe_allow_html=True
         )
-
-    create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+        
+    if "playlist_disabled" not in st.session_state:
+        st.session_state["playlist_disabled"] = False
+    
+    # Lucky user logic
+    if not st.session_state["playlist_disabled"]:
+        if len(choices) <=690:
+            create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different)
+        else:
+            st.error("🚫 Cannot create playlist: Spotify only allows up to 690 songs per day.")
+    else:
+        st.warning("⚠️ Bad luck! Today's lucky users have already been selected. Please try again tomorrow...")
 
     # Banner
     st.divider()
