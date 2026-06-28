@@ -508,7 +508,7 @@ with tab3:
             create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different)
         else:
-            st.error("🚫 Cannot create playlist: Spotify only allows up to 690 songs per day.")
+            st.error("🚫 Cannot create playlist: Spotify only allows up to 690 songs per day. Try adjusting your sidebar filters to select your own 'Filtered Market' with songs equal to or less than 690.")
     else:
         st.warning("⚠️ Bad luck! Today's lucky users have already been selected. Please try again tomorrow...")
 
