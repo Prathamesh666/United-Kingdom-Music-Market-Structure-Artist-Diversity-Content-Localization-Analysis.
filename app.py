@@ -476,9 +476,9 @@ with tab3:
         """
         <div style="text-align: center;">
         
-            ⚡ **Lucky User Rule** ⚡  
+            ⚡ Lucky User Rule ⚡  
             - Only the first few lucky users each day can create a playlist.  
-            - Spotify allows max **690 searches per day**.  
+            - Spotify allows max 690 searches per day in a playlist.  
             - If the rate limit is hit, playlist creation is disabled until tomorrow.  
         
             Before Login 🔑: You are on 'https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/'
@@ -1915,56 +1915,56 @@ try:
     gmm_labels_eng = gmm_eng.predict(X_test_eng)
     gmm_accuracy_eng, gmm_metrics_df_eng = get_metrics(y_test_eng, gmm_labels_eng, "Gaussian Mixture (Engineered Features)")
     
-    # Build comparison DataFrames for each model
-    lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
-    linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
-    rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
-    xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_eng_df, "XGBoost")
-    kmeans_comparison_df = build_comparison_df(kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, "KMeans")
-    svm_comparison_df = build_comparison_df(svm_metrics_df_no_eng, svm_metrics_df_eng, "SVM")
-    gb_comparison_df = build_comparison_df(gb_metrics_df_no_eng, gb_metrics_df_eng, "Gradient Boosting")
-    gmm_comparison_df = build_comparison_df(gmm_metrics_df_no_eng, gmm_metrics_df_eng, "Gaussian Mixture")
-    
-    # Combine all into one master comparison DataFrame
-    all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
-                                        kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
-    
-    # Create comparison_df for plotting RF performance with/without engineered features
-    comparison_data = []
-    
-    rf_metrics_no_eng_dict = rf_metrics_df_no_eng.to_dict('index')
-    rf_metrics_with_eng_dict = rf_metrics_eng_df.to_dict('index')
-    
-    for class_name_key in rf_metrics_no_eng_dict:
-        metrics = rf_metrics_no_eng_dict[class_name_key]
-        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-        comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-    
-    for class_name_key in rf_metrics_with_eng_dict:
-        metrics = rf_metrics_with_eng_dict[class_name_key]
-        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
-        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
-        comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
-    
-    comparison_df = pd.DataFrame(comparison_data)
-    
-    # --- 3.4 Model Accuracy Comparison DataFrames to find best model ---
-    # Create a DataFrame for the summary table
-    accuracy_summary_df = pd.DataFrame({
-        'Model': [
-            'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
-            'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
-            'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)', 'KMeans (No Features)', 'KMeans (Engineered Features)',
-            'SVM (No Features)', 'SVM (Engineered Features)', 'Gradient Boosting (No Features)', 'Gradient Boosting (Engineered Features)',
-            'Gaussian Mixture (No Features)', 'Gaussian Mixture (Engineered Features)'
-        ],
-        'Accuracy': [
-            lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng,
-            kmeans_accuracy_no_eng, kmeans_accuracy_eng, svm_accuracy_no_eng, svm_accuracy_eng, gb_accuracy_no_eng, gb_accuracy_eng, gmm_accuracy_no_eng, gmm_accuracy_eng
-        ]
-    })
     try:
+        # Build comparison DataFrames for each model
+        lr_comparison_df = build_comparison_df(metrics_df, lr_metrics_eng_df, "Logistic Regression")
+        linear_comparison_df = build_comparison_df(Lr_metrics_df_no_eng, Lr_metrics_eng_df, "Linear Regression")
+        rf_comparison_df = build_comparison_df(rf_metrics_df_no_eng, rf_metrics_eng_df, "Random Forest")
+        xgb_comparison_df = build_comparison_df(xgb_metrics_df_no_eng, xgb_metrics_eng_df, "XGBoost")
+        kmeans_comparison_df = build_comparison_df(kmeans_metrics_df_no_eng, kmeans_metrics_df_eng, "KMeans")
+        svm_comparison_df = build_comparison_df(svm_metrics_df_no_eng, svm_metrics_df_eng, "SVM")
+        gb_comparison_df = build_comparison_df(gb_metrics_df_no_eng, gb_metrics_df_eng, "Gradient Boosting")
+        gmm_comparison_df = build_comparison_df(gmm_metrics_df_no_eng, gmm_metrics_df_eng, "Gaussian Mixture")
+        
+        # Combine all into one master comparison DataFrame
+        all_models_comparison_df = pd.concat([lr_comparison_df, linear_comparison_df, rf_comparison_df, xgb_comparison_df,
+                                            kmeans_comparison_df, svm_comparison_df, gb_comparison_df, gmm_comparison_df], ignore_index=True)
+        
+        # Create comparison_df for plotting RF performance with/without engineered features
+        comparison_data = []
+        
+        rf_metrics_no_eng_dict = rf_metrics_df_no_eng.to_dict('index')
+        rf_metrics_with_eng_dict = rf_metrics_eng_df.to_dict('index')
+        
+        for class_name_key in rf_metrics_no_eng_dict:
+            metrics = rf_metrics_no_eng_dict[class_name_key]
+            comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+            comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+            comparison_data.append({'Model': 'RF (No Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+        
+        for class_name_key in rf_metrics_with_eng_dict:
+            metrics = rf_metrics_with_eng_dict[class_name_key]
+            comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Precision', 'Score': metrics['precision']})
+            comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'Recall', 'Score': metrics['recall']})
+            comparison_data.append({'Model': 'RF (Engineered Features)', 'Class': class_name_key, 'Metric': 'F1-score', 'Score': metrics['f1-score']})
+        
+        comparison_df = pd.DataFrame(comparison_data)
+        
+        # --- 3.4 Model Accuracy Comparison DataFrames to find best model ---
+        # Create a DataFrame for the summary table
+        accuracy_summary_df = pd.DataFrame({
+            'Model': [
+                'Logistic Regression (No Features)', 'Logistic Regression (With Engineered Features)', 'Random Forest (No Features)', 
+                'Random Forest (With Engineered Features)', 'Linear Regression (With Engineered Features)', 'Linear Regression (No Engineered Features)',
+                'XGBoost (With Engineered Features)', 'XGBoost (Without Engineered Features)', 'KMeans (No Features)', 'KMeans (Engineered Features)',
+                'SVM (No Features)', 'SVM (Engineered Features)', 'Gradient Boosting (No Features)', 'Gradient Boosting (Engineered Features)',
+                'Gaussian Mixture (No Features)', 'Gaussian Mixture (Engineered Features)'
+            ],
+            'Accuracy': [
+                lr_accuracy_no_eng, lr_accuracy_eng, rf_accuracy_no_eng, rf_accuracy_eng, Lr_accuracy_eng, Lr_accuracy_no_eng, xgb_accuracy_eng, xgb_accuracy_no_eng,
+                kmeans_accuracy_no_eng, kmeans_accuracy_eng, svm_accuracy_no_eng, svm_accuracy_eng, gb_accuracy_no_eng, gb_accuracy_eng, gmm_accuracy_no_eng, gmm_accuracy_eng
+            ]
+        })
         if "accuracy_summary_df_original" not in st.session_state:
             if not is_any_filter_different:
                 st.session_state["accuracy_summary_df_original"] = accuracy_summary_df
