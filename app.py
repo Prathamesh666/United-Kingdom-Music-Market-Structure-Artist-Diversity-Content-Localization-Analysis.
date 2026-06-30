@@ -22,6 +22,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
 
 ga_tag = """
+    <meta name="google-site-verification" content="8qhJewqcfQuP-HpMtrPOHyc72ENL1xOzBI_THkMVHKo" />
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-H7VP3CYEPB"></script>
     <script>
