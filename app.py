@@ -411,8 +411,8 @@ print("✅ Genre-specific statistics calculated.")
 
 print("--- All required dataframes and variables are now prepared. ---")
 
-tab1, tab2, tab3 = st.tabs(["UK Music Market Structural Analysis", 
-                    "Recommendational Analysis for UK's Music Listeners", "Music Streaming for All Music Listeners"])
+tab1, tab2, tab3 = st.tabs([
+    "🏛️ UK Music Market Structural Analysis", "📊 Recommendational Analysis for UK's Music Listeners", "🎧 Music Streaming for All Music Listeners"])
 
 with tab3:
     # Header row with symbol + title
