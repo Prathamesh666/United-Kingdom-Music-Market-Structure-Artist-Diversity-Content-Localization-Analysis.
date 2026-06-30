@@ -423,8 +423,6 @@ with tab3:
         st.header("🎵 United Kingdom's Music Streaming")
         st.balloons()
 
-    st.divider()
-
     # Search bar
     query = st.text_input("🔍 Search for a song or artist")
     if query:
