@@ -174,24 +174,30 @@ def get_youtube_video_id(song: str, artist: str, api_key: str) -> str:
     Search YouTube for the official music video of a song + artist.
     Returns the first matching video ID or None.
     """
-    query = f"{song} {artist} official music video"
-    url = "https://www.googleapis.com/youtube/v3/search"
-    
-    params = {
-        "part": "snippet",
-        "q": query,
-        "type": "video",
-        "videoCategoryId": "10",   # Music category
-        "maxResults": 1,
-        "key": api_key
-    }
-    
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        items = data.get("items", [])
-        if items:
-            return items[0]["id"]["videoId"]
+    try:
+        query = f"{song} {artist} official music video"
+        url = "https://www.googleapis.com/youtube/v3/search"
+        
+        params = {
+            "part": "snippet",
+            "q": query,
+            "type": "video",
+            "videoCategoryId": "10",   # Music category
+            "maxResults": 1,
+            "key": api_key
+        }
+        
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            items = data.get("items", [])
+            if items:
+                return items[0]["id"]["videoId"]
+    except:
+        col_audio, col_video = st.columns([1,2.25])
+        with col_video:
+            st.error(f"🚫 YouTube API error for {song} by {artist}. Redirecting you to the already created YouTube playlist of baseline market instead.")
+            st.success("🎬 [Open YouTube Playlist](https://www.youtube.com/playlist?list=PLBMkxAvHF42Y)")
     return "None"
 
 REDIRECT_URI = "https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/"
@@ -440,3 +446,82 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
             </div>
             """, unsafe_allow_html=True
         )
+
+# Build YouTube playlist description dynamically
+def build_youtube_description(start_date, end_date, collaboration_choice, selected_album_types, duration_range, selected_popularity, is_any_filter_different):
+    if not is_any_filter_different:
+        # Default description (listener-focused, video vibe)
+        return (
+            "Lights, camera, music! 🎬✨ Dive into a cinematic journey of sound and vision — "
+            "epic performances 🎤, timeless classics 🕰️, fresh discoveries 🌟, and unforgettable "
+            "moments captured on screen 🎶. A playlist built to entertain, inspire, and replay 🔁."
+        )
+
+    # Filter-based description (structured, clear, presentable)
+    description_parts = [
+        f"Date Range: {start_date} to {end_date}",
+        f"Track Type: {collaboration_choice}",
+        f"Album Types: {', '.join(selected_album_types) if selected_album_types else 'All'}",
+        f"Duration: {duration_range[0]}–{duration_range[1]} minutes",
+        f"Popularity: {selected_popularity[0]}–{selected_popularity[1]}"
+    ]
+
+    return (
+        "YouTube playlist generated with filters → "
+        + " | ".join(description_parts)
+        + " 🎬🎵"
+    )
+
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+
+def get_youtube_client(secret_file, port):
+    flow = InstalledAppFlow.from_client_secrets_file(
+        secret_file,
+        scopes=["https://www.googleapis.com/auth/youtube"]
+    )
+    creds = flow.run_local_server(port=port)
+    youtube = build("youtube", "v3", credentials=creds)
+    return youtube
+
+def create_playlist(youtube, title, filters):
+    """
+    filters is a dict with keys:
+    start_date, end_date, collaboration_choice,
+    selected_album_types, duration_range, selected_popularity,
+    is_any_filter_different
+    """
+    description = build_youtube_description(
+        filters["start_date"],
+        filters["end_date"],
+        filters["collaboration_choice"],
+        filters["selected_album_types"],
+        filters["duration_range"],
+        filters["selected_popularity"],
+        filters["is_any_filter_different"]
+    )
+
+    request = youtube.playlists().insert(
+        part="snippet,status",
+        body={
+            "snippet": {"title": title, "description": description},
+            "status": {"privacyStatus": "public"}
+        }
+    )
+    response = request.execute()
+    return response["id"]
+
+def add_video(youtube, playlist_id, video_id):
+    try:
+        request = youtube.playlistItems().insert(
+            part="snippet",
+            body={
+                "snippet": {
+                    "playlistId": playlist_id,
+                    "resourceId": {"kind": "youtube#video", "videoId": video_id}
+                }
+            }
+        )
+        request.execute()
+    except:
+        st.error(f"Failed to add video {video_id} to playlist {playlist_id}.")

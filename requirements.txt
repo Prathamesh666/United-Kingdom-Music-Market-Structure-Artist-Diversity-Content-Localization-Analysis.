@@ -10,3 +10,5 @@ tqdm # Progress bar display in terminal
 transformers # Genre prediction using CLIP model
 torch
 torchvision # For CLIP model
+google-auth-oauthlib
+google-api-python-client
