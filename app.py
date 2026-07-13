@@ -537,15 +537,15 @@ with tab3:
             
             # OAuth clients (4 files)
             client_files = [
-                "client_secret_3.json",
-                "client_secret_4.json",
-                "client_secret_5.json",
-                "client_secret_2.json"
+                ".streamlit/client_secret_3.json",
+                ".streamlit/client_secret_4.json",
+                ".streamlit/client_secret_5.json",
+                ".streamlit/client_secret_2.json"
             ]
             
             # API keys (14 keys from st.secrets)
             api_keys = []
-            for i in range(1, 9):  # 1 through 8
+            for i in range(1, 10):  # 1 through 9
                 key_name = f"Key_{i}"
                 if key_name in st.secrets:
                     api_keys.append(st.secrets[key_name])
@@ -576,8 +576,7 @@ with tab3:
                 youtube_clients.append(get_youtube_client(secret_file, port))
             playlist_id = create_playlist(youtube_clients[0], "🎬 Atlantic United Kingdom Music Videos", filters)    #"PLZ08N3lwKEoc" "PLQJFzcDXdSCc" 610 & 608
             
-            #for i, row in enumerate(unique_songs.iloc[188:].itertuples(index=False), start=188):
-            for i, choice in enumerate(choices[600:], start=600):
+            for i, choice in enumerate(choices, start=0):
                 # Split "Song — Artist"
                 song, artist = choice.split(" — ")
                 
@@ -608,8 +607,12 @@ with tab3:
             
                 if vid and vid != "None":
                     try:
-                        add_video(youtube, playlist_id, vid)
-                        vid_ids_per_client[key_name].append(vid)
+                        # ✅ Check for duplicates before adding
+                        if vid not in vid_ids_per_client[key_name]:
+                            add_video(youtube, playlist_id, vid)
+                            vid_ids_per_client[key_name].append(vid)
+                        else:
+                            st.toast(f"Duplicate video ID {vid} for {song} — {artist}. Skipping...")
                     except HttpError as e:
                         st.toast(f"Insert quota error for client {client_index+1}: {e}. Switching to next client...")
                         client_index += 1
@@ -642,7 +645,7 @@ with tab3:
                             json.dump(ids, f, indent=2)
                         st.success(f"Saved {len(ids)} IDs to {filename}")
     except:
-        st.warning("⚠️ You are not registered as a 'Test User'")    
+        st.warning("⚠️ You are not registered as a 'Test User'")
     # Banner
     st.divider()
     st.image("static/Livestream_banner.png")

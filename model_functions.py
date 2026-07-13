@@ -197,7 +197,7 @@ def get_youtube_video_id(song: str, artist: str, api_key: str) -> str:
         col_audio, col_video = st.columns([1,2.25])
         with col_video:
             st.error(f"🚫 YouTube API error for {song} by {artist}. Redirecting you to the already created YouTube playlist of baseline market instead.")
-            st.success("🎬 [Open YouTube Playlist](https://www.youtube.com/playlist?list=PLBMkxAvHF42Y)")
+            st.success("🎬 [Open YouTube Playlist](https://youtube.com/playlist?list=PLCvr4P68U0Ps&si=GUGnlGo8QHt2UID4)")
     return "None"
 
 REDIRECT_URI = "https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/"
