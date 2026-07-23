@@ -520,8 +520,6 @@ with tab3:
             create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different)
         else:
-            create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
-                                selected_popularity, is_any_filter_different)
             st.error("🚫 Cannot create playlist: Spotify only allows up to 690 songs per day. Try adjusting your sidebar filters to select your own 'Filtered Market' with songs equal to or less than 690.")
     else:
         st.warning("⚠️ Bad luck! Today's lucky users have already been selected. Please try again tomorrow...")
@@ -542,13 +540,12 @@ with tab3:
                 ".streamlit/client_secret_3.json",
                 ".streamlit/client_secret_4.json",
                 ".streamlit/client_secret_5.json",
-                ".streamlit/client_secret_6.json",
                 ".streamlit/client_secret_2.json"
             ]
             
             # API keys (14 keys from st.secrets)
             api_keys = []
-            for i in range(1, 14):  # 1 through 13
+            for i in range(1, 10):  # 1 through 9
                 key_name = f"Key_{i}"
                 if key_name in st.secrets:
                     api_keys.append(st.secrets[key_name])
@@ -574,10 +571,10 @@ with tab3:
             progress = st.progress(0)
             # Authenticate all clients once at the start
             youtube_clients = []
-            ports = [8502, 8503, 8504, 8505, 8081]  # one free port per client
+            ports = [8502, 8503, 8504, 8081]  # one free port per client
             for secret_file, port in zip(client_files, ports):
                 youtube_clients.append(get_youtube_client(secret_file, port))
-            playlist_id = create_playlist(youtube_clients[0], "🎬 Atlantic Music Videos: Baseline Beats in Root Rhythm", filters)    #"PLZ08N3lwKEoc" "PLQJFzcDXdSCc" 610 & 608
+            playlist_id = create_playlist(youtube_clients[0], "🎬 Atlantic United Kingdom Music Videos", filters)    #"PLZ08N3lwKEoc" "PLQJFzcDXdSCc" 610 & 608
             
             for i, choice in enumerate(choices, start=0):
                 # Split "Song — Artist"

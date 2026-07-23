@@ -296,25 +296,6 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     progress_text.text("✅ All tracks uploaded successfully!")
     return {"status": "success"}
 
-import json, os
-def load_seen_ids(folder_path="Spotify ids of baseline market"):
-    seen_ids = set()
-    filenames = ["track_uris_day_1.json", "track_uris_day_2.json"]
-
-    for filename in filenames:
-        file_path = os.path.join(folder_path, filename)
-        try:
-            with open(file_path, "r") as f:
-                uris = json.load(f)
-                # Extract only the ID part after "spotify:track:"
-                ids = {uri.split(":")[-1] for uri in uris}
-                seen_ids.update(ids)
-        except FileNotFoundError:
-            # If file doesn't exist, skip it
-            continue
-    print(len(seen_ids), "unique Spotify IDs loaded from baseline market files.")
-    return seen_ids
-
 def create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different):
     query_params = st.query_params
@@ -375,7 +356,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
             return
 
         # Create playlist
-        playlist_name = "🎤 Atlantic Playlist: Baseline Beats in Root Rhythm"
+        playlist_name = "🎤 Atlantic United Kingdom Playlist"
         if is_any_filter_different:
             playlist_name = "🎤 Atlantic United Kingdom Playlist Filtered"
                 
@@ -392,65 +373,55 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
-        #track_uris = []
-        seen_ids = load_seen_ids() #set()
-        #total = len(unique_songs)
-        #st.caption(f"Scope: {st.session_state.get('scope')}")
-        #
-        #for i, (_, row) in enumerate(unique_songs.iloc[:666].iterrows()):
-        #    track_id = search_spotify_track(
-        #        row["song"], row["artist"],
-        #        {"Authorization": f"Bearer {access_token}"}
-        #    )
-        #    
-        #    if track_id:  
-        #        spotify_id = track_id[0]
-        #        if spotify_id not in seen_ids:   # ✅ only add if not seen
-        #            track_uris.append(f"spotify:track:{spotify_id}")
-        #            seen_ids.add(spotify_id)
-        #        else:
-        #            st.info(f"Skipping duplicate track: {row['song']} — {row['artist']}")
-        #
-        #    # update progress bar gradually
-        #    percent_complete = 40 + int(60 * (i+1)/total)
-        #    progress_bar.progress(percent_complete)
-        #    progress_text.text(f"Searching track {i+1}/{total}...")
-            
-        import json
-
         track_uris = []
-        subset = unique_songs.iloc[:666]   # first 600 songs
+        total = len(unique_songs)
+        st.caption(f"Scope: {st.session_state.get('scope')}")
         
-        for i, (_, row) in enumerate(subset.iterrows(), start=1):
+        for i, (_, row) in enumerate(unique_songs.iterrows()):
             track_id = search_spotify_track(
                 row["song"], row["artist"],
                 {"Authorization": f"Bearer {access_token}"}
             )
             
             if track_id:  
-                spotify_id = track_id[0]
-                if spotify_id not in seen_ids:   # ✅ only add if not seen
-                    track_uris.append(f"spotify:track:{spotify_id}")
-                    seen_ids.add(spotify_id)
-                else:
-                    st.toast(f"Skipping duplicate track: {row['song']} — {row['artist']}")
-            
-            percent_complete = int(100 * (i-666)/len(subset))
+                track_uris.append(f"spotify:track:{track_id[0]}")
+        
+            # update progress bar gradually
+            percent_complete = 40 + int(60 * (i+1)/total)
             progress_bar.progress(percent_complete)
-            progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
+            progress_text.text(f"Searching track {i+1}/{total}...")
             
-        # ✅ Save locally
-        with open("track_uris_US_day_1.json", "w") as f:
-            json.dump(track_uris, f)
-    
+        #import json
+#
+        #track_uris = []
+        #subset = unique_songs.iloc[:600]   # first 600 songs
+        #
+        #for i, (_, row) in enumerate(subset.iterrows(), start=667):
+        #    track_id = search_spotify_track(
+        #        row["song"], row["artist"],
+        #        {"Authorization": f"Bearer {access_token}"}
+        #    )
+        #    
+        #    if track_id:  
+        #        track_uris.append(f"spotify:track:{track_id[0]}")
+        #    
+        #    percent_complete = int(100 * (i-666)/len(subset))
+        #    progress_bar.progress(percent_complete)
+        #    progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
+        #    
+        #
+        ## ✅ Save locally
+        #with open("track_uris_day_2.json", "w") as f:
+        #    json.dump(track_uris, f)
+        
         st.success(f"Saved {len(track_uris)} URIs to track_uris_day1.json")
         # ✅ Provide download button
-        st.download_button(
-            label="Download Day 1 Track URIs",
-            data=json.dumps(track_uris, indent=2),
-            file_name="track-uris_Atlantic_day_1.json",
-            mime="application/json"
-        )
+        #st.download_button(
+        #    label="Download Day 1 Track URIs",
+        #    data=json.dumps(track_uris, indent=2),
+        #    file_name="track_uris_day_2.json",
+        #    mime="application/json"
+        #)
         
         # Debug check
         # Clean up track_uris before sending
