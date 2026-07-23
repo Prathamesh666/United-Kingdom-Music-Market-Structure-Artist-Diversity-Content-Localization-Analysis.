@@ -421,7 +421,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         track_uris = []
         subset = unique_songs.iloc[:666]   # first 600 songs
         
-        for i, (_, row) in enumerate(subset.iterrows(), start=667):
+        for i, (_, row) in enumerate(subset.iterrows(), start=1):
             track_id = search_spotify_track(
                 row["song"], row["artist"],
                 {"Authorization": f"Bearer {access_token}"}
@@ -433,7 +433,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
                     track_uris.append(f"spotify:track:{spotify_id}")
                     seen_ids.add(spotify_id)
                 else:
-                    st.info(f"Skipping duplicate track: {row['song']} — {row['artist']}")
+                    st.toast(f"Skipping duplicate track: {row['song']} — {row['artist']}")
             
             percent_complete = int(100 * (i-666)/len(subset))
             progress_bar.progress(percent_complete)
