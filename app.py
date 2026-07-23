@@ -543,7 +543,9 @@ with tab3:
                 ".streamlit/client_secret_4.json",
                 ".streamlit/client_secret_5.json",
                 ".streamlit/client_secret_6.json",
-                ".streamlit/client_secret_2.json"
+                ".streamlit/client_secret_7.json",
+                ".streamlit/client_secret_2.json",
+                ".streamlit/client_secret_1.json"
             ]
             
             # API keys (14 keys from st.secrets)
@@ -574,7 +576,7 @@ with tab3:
             progress = st.progress(0)
             # Authenticate all clients once at the start
             youtube_clients = []
-            ports = [8502, 8503, 8504, 8505, 8081]  # one free port per client
+            ports = [8502, 8503, 8504, 8505, 8506, 8081, 8501]  # one free port per client
             for secret_file, port in zip(client_files, ports):
                 youtube_clients.append(get_youtube_client(secret_file, port))
             playlist_id = create_playlist(youtube_clients[0], "🎬 Atlantic Music Videos: Baseline Beats in Root Rhythm", filters)    #"PLZ08N3lwKEoc" "PLQJFzcDXdSCc" 610 & 608
