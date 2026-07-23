@@ -393,7 +393,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         #track_uris = []
-        seen_ids = load_seen_ids() #set()
+        seen_ids =  set() #load_seen_ids()
         #total = len(unique_songs)
         #st.caption(f"Scope: {st.session_state.get('scope')}")
         #
