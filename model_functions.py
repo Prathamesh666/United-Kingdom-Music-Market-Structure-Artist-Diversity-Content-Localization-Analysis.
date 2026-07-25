@@ -435,7 +435,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
                 else:
                     st.toast(f"Skipping duplicate track: {row['song']} — {row['artist']}")
             
-            percent_complete = int(100 * (i-666)/len(subset))
+            percent_complete = int(100 * (i+1)/len(subset))
             progress_bar.progress(percent_complete)
             progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
             
