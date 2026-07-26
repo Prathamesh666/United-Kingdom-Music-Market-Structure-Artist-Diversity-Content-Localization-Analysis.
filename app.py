@@ -517,11 +517,52 @@ with tab3:
     # Lucky user logic
     if not st.session_state["playlist_disabled"]:
         if len(choices) <=690:
-            create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+            default_name = "🎤 Atlantic Playlist: Baseline Beats"
+            use_default = st.checkbox("Use default playlist name", value=True)
+            
+            # If unchecked, show editable text input pre-filled with default
+            if use_default:
+                playlist_name = default_name
+            else:
+                playlist_name = st.text_input("Edit playlist name:", value=default_name)
+            
+            # Ask if user already has a playlist
+            has_existing = st.checkbox("Already have a playlist? Add tracks to it")
+            if has_existing:
+                playlist_id = st.text_input("Enter your existing Spotify Playlist ID:")
+            if playlist_id:
+                try:
+                    create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+                                                selected_popularity, is_any_filter_different, playlist_id)
+                except Exception:
+                    st.error("🚫 Invalid Playlist ID. Please check and try again.")  
+            else:
+                create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different)
         else:
-            create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+            default_name = "🎤 Atlantic Playlist: Baseline Beats"
+            use_default = st.checkbox("Use default playlist name", value=True)
+            
+            # If unchecked, show editable text input pre-filled with default
+            if use_default:
+                playlist_name = default_name
+            else:
+                playlist_name = st.text_input("Edit playlist name:", value=default_name)
+            
+            # Ask if user already has a playlist
+            has_existing = st.checkbox("Already have a playlist? Add tracks to it")
+            if has_existing:
+                playlist_id = st.text_input("Enter your existing Spotify Playlist ID:")
+            if playlist_id:
+                try:
+                    create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+                                                selected_popularity, is_any_filter_different, playlist_id)
+                except Exception:
+                    st.error("🚫 Invalid Playlist ID. Please check and try again.")  
+            else:
+                create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                 selected_popularity, is_any_filter_different)
+            
             st.error("🚫 Cannot create playlist: Spotify only allows up to 690 songs per day. Try adjusting your sidebar filters to select your own 'Filtered Market' with songs equal to or less than 690.")
     else:
         st.warning("⚠️ Bad luck! Today's lucky users have already been selected. Please try again tomorrow...")

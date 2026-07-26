@@ -315,8 +315,8 @@ def load_seen_ids(folder_path="Spotify ids of baseline market"):
     print(len(seen_ids), "unique Spotify IDs loaded from baseline market files.")
     return seen_ids
 
-def create_playlist_from_dataframe(unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
-                                selected_popularity, is_any_filter_different):
+def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
+                                selected_popularity, is_any_filter_different, playlist_id = None):
     query_params = st.query_params
 
     # Step 1: Handle login
@@ -363,7 +363,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
                 access_token = new_tokens["access_token"]
 
     # Step 3: Playlist creation button
-    if st.button("🎶 Create Playlist from Unique Songs"):
+    if st.button("🎶 Create New Playlist Or Add Tracks to Existing Playlist from Unique Songs"):
         progress_bar = st.progress(0)
         progress_text = st.empty()
 
@@ -375,20 +375,23 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
             return
 
         # Create playlist
-        playlist_name = "🎤 Atlantic Playlist: Baseline Beats in Root Rhythm"
         if is_any_filter_different:
-            playlist_name = "🎤 Atlantic United Kingdom Playlist Filtered"
+            playlist_name = playlist_name + " Filtered"
                 
         playlist_description = build_playlist_description( 
             start_date, end_date, collaboration_choice, selected_album_types, duration_range, selected_popularity, is_any_filter_different )
         
-        progress_text.text("🎶 Step 2/3: Creating playlist...")
-        playlist = create_spotify_playlist(access_token, name=playlist_name, description=playlist_description)
+        if playlist_id == None:
+            progress_text.text("🎶 Step 2/3: Creating playlist...")
+            playlist = create_spotify_playlist(access_token, name=playlist_name, description=playlist_description)
+            if "id" not in playlist:
+                st.error(f"Failed to create playlist: {playlist}")
+                return
+            playlist_id = "3JeZAwR79rBQzFdBnEBEnt" #playlist["id"]
+        else:
+            progress_text.text("🎶 Step 2/3: Creating playlist...")
+            st.toast(f"Using existing playlist ID: {playlist_id}")
         progress_bar.progress(40)
-        if "id" not in playlist:
-            st.error(f"Failed to create playlist: {playlist}")
-            return
-        playlist_id = playlist["id"]
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
@@ -446,7 +449,7 @@ def create_playlist_from_dataframe(unique_songs, start_date, end_date, collabora
         st.success(f"Saved {len(track_uris)} URIs to track_uris_Atlantic_day1.json")
         # ✅ Provide download button
         st.download_button(
-            label="Download Day 1 Track URIs",
+            label="Download Day 2 Track URIs",
             data=json.dumps(track_uris, indent=2),
             file_name="track-uris_Atlantic_day_1.json",
             mime="application/json"
