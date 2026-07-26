@@ -532,125 +532,153 @@ with tab3:
     import os
     from googleapiclient.errors import HttpError
     
+    default_name = "🎬 Atlantic Music Videos: Baseline Beats"
+
+    # Checkbox to use default
+    use_default = st.checkbox("Use default playlist name", value=True)
+    
+    # If unchecked, show editable text input pre-filled with default
+    if use_default:
+        final_name = default_name
+    else:
+        final_name = st.text_input("Edit playlist name:", value=default_name)
+    
     filters = {"start_date": start_date, "end_date": end_date, "collaboration_choice": collaboration_choice, "selected_album_types": selected_album_types,
             "duration_range": duration_range, "selected_popularity": selected_popularity, "is_any_filter_different": is_any_filter_different}
-    try:
-        if st.button("🎵 Create YouTube Playlist"):
+    #try:
+    if st.button("🎵 Create YouTube Playlist"):
+        
+        # OAuth clients (4 files)
+        client_files = [
+            ".streamlit/client_secret_3.json",
+            ".streamlit/client_secret_4.json",
+            ".streamlit/client_secret_5.json",
+            ".streamlit/client_secret_6.json",
+            ".streamlit/client_secret_7.json",
+            ".streamlit/client_secret_2.json",
+            ".streamlit/client_secret_1.json"
+        ]
+        
+        # API keys (14 keys from st.secrets)
+        api_keys = []
+        for i in range(1, 14):  # 1 through 13
+            key_name = f"Key_{i}"
+            if key_name in st.secrets:
+                api_keys.append(st.secrets[key_name])
+        print(f"Loaded {len(api_keys)} API keys from Streamlit secrets: ",api_keys)
+        
+        songs_per_client = 200   # inserts per OAuth client
+        songs_per_key = 100       # searches per API key
+        num_clients = len(client_files)
+        num_keys = len(api_keys)
+        
+        # Load cached IDs if they exist
+        vid_ids_per_client = {}
+        for i in range(num_clients):
+            key_name = f"Vid_ids_client_{i+1}"
+            filename = f"{key_name}.json"
+            if os.path.exists(filename):
+                with open(filename, "r") as f:
+                    vid_ids_per_client[key_name] = json.load(f)
+            else:
+                vid_ids_per_client[key_name] = []
+        
+        skipped_songs = []
+        progress = st.progress(0)
+        # Authenticate all clients once at the start
+        #youtube_clients = []
+        #ports = [8502, 8503, 8504, 8505, 8506, 8081, 8501]  # one free port per client 3,4,5,6,7,2,1
+        #for secret_file, port in zip(client_files, ports):
+        #    youtube_clients.append(get_youtube_client(secret_file, port))
+        
+        ports = [8505, 8501, 8502, 8503, 8504, 8506, 8081] # 6,2,3,4,5,7,1
+        youtube_clients = []
+        total_songs = len(choices)
+        required_clients = min((total_songs + songs_per_client - 1) // songs_per_client, len(ports))
+        num_clients = required_clients  # Update num_clients based on actual usage
+        for i, port in enumerate(ports[:num_clients], start=1):  # client_1 through client_7
+            section = f"client_{i}"
+            if section in st.secrets:
+                youtube_clients.append(get_youtube_client(section, port))
+        
+        playlist_id = create_playlist(youtube_clients[0], final_name, filters)    #"PLZ08N3lwKEoc" "PLQJFzcDXdSCc" 610 & 608
+        
+        for i, choice in enumerate(choices, start=0):
+            # Split "Song — Artist"
+            song, artist = choice.split(" — ")
             
-            # OAuth clients (4 files)
-            client_files = [
-                ".streamlit/client_secret_3.json",
-                ".streamlit/client_secret_4.json",
-                ".streamlit/client_secret_5.json",
-                ".streamlit/client_secret_6.json",
-                ".streamlit/client_secret_7.json",
-                ".streamlit/client_secret_2.json",
-                ".streamlit/client_secret_1.json"
-            ]
-            
-            # API keys (14 keys from st.secrets)
-            api_keys = []
-            for i in range(1, 14):  # 1 through 13
-                key_name = f"Key_{i}"
-                if key_name in st.secrets:
-                    api_keys.append(st.secrets[key_name])
-            print(f"Loaded {len(api_keys)} API keys from Streamlit secrets: ",api_keys)
-            
-            songs_per_client = 200   # inserts per OAuth client
-            songs_per_key = 100       # searches per API key
-            num_clients = len(client_files)
-            num_keys = len(api_keys)
-            
-            # Load cached IDs if they exist
-            vid_ids_per_client = {}
-            for i in range(num_clients):
-                key_name = f"Vid_ids_client_{i+1}"
-                filename = f"{key_name}.json"
-                if os.path.exists(filename):
-                    with open(filename, "r") as f:
-                        vid_ids_per_client[key_name] = json.load(f)
-                else:
-                    vid_ids_per_client[key_name] = []
-            
-            skipped_songs = []
-            progress = st.progress(0)
-            # Authenticate all clients once at the start
-            youtube_clients = []
-            ports = [8502, 8503, 8504, 8505, 8506, 8081, 8501]  # one free port per client
-            for secret_file, port in zip(client_files, ports):
-                youtube_clients.append(get_youtube_client(secret_file, port))
-            playlist_id = create_playlist(youtube_clients[0], "🎬 Atlantic Music Videos: Baseline Beats in Root Rhythm", filters)    #"PLZ08N3lwKEoc" "PLQJFzcDXdSCc" 610 & 608
-            
-            for i, choice in enumerate(choices, start=0):
-                # Split "Song — Artist"
-                song, artist = choice.split(" — ")
-                
-                # --- Rotation logic ---
-                client_index = (i // songs_per_client) % num_clients
-                key_index = (i // songs_per_key) % num_keys
-            
-                if client_index >= num_clients:
-                    st.error("🚫 Not enough OAuth clients to process all songs.")
-                    break
-                if key_index >= num_keys:
-                    st.error("🚫 Not enough API keys to search all songs.")
-                    break
-            
-                youtube = youtube_clients[client_index] 
-                api_key = api_keys[key_index]
-                key_name = f"Vid_ids_client_{client_index+1}"
-            
-                # Skip if already cached
-                if vid_ids_per_client[key_name] and len(vid_ids_per_client[key_name]) >= songs_per_client:
-                    continue
-            
+            # --- Rotation logic ---
+            client_index = (i // songs_per_client) % num_clients
+            key_index = (i // songs_per_key) % num_keys
+        
+            if client_index >= num_clients:
+                st.error("🚫 Not enough OAuth clients to process all songs.")
+                break
+            if key_index >= num_keys:
+                st.error("🚫 Not enough API keys to search all songs.")
+                break
+        
+            youtube = youtube_clients[client_index] 
+            api_key = api_keys[key_index]
+            key_name = f"Vid_ids_client_{client_index+1}"
+        
+            # Skip if already cached
+            if vid_ids_per_client[key_name] and len(vid_ids_per_client[key_name]) >= songs_per_client:
+                continue
+        
+            try:
+                vid = get_youtube_video_id(song, artist, api_key)
+            except Exception as e:
+                st.toast(f"Video not found for {song} — {artist}. Skipping...")
+                skipped_songs.append({"song": song, "artist": artist})
+        
+            if vid and vid != "None":
                 try:
-                    vid = get_youtube_video_id(song, artist, api_key)
-                except Exception as e:
-                    st.toast(f"Video not found for {song} — {artist}. Skipping...")
-                    skipped_songs.append({"song": song, "artist": artist})
-            
-                if vid and vid != "None":
-                    try:
-                        # ✅ Check for duplicates before adding
-                        if vid not in vid_ids_per_client[key_name]:
-                            add_video(youtube, playlist_id, vid)
-                            vid_ids_per_client[key_name].append(vid)
-                        else:
-                            st.toast(f"Duplicate video ID {vid} for {song} — {artist}. Skipping...")
-                    except HttpError as e:
-                        st.toast(f"Insert quota error for client {client_index+1}: {e}. Switching to next client...")
-                        client_index += 1
-                        if client_index >= num_clients:
-                            st.error("🚫 All clients exhausted.")
-                            break
-                        continue
-    
-                # Auto-save after each insert
-                filename = f"{key_name}.json"
-                with open(filename, "w") as f:
-                    json.dump(vid_ids_per_client[key_name], f, indent=2)
-            
-                progress.progress(int(i+1)/len(choices))
-                progress.text(f"Adding video {i+1}/{len(choices)}: {song} — {artist}")
-            
-            progress.empty()
-            st.success(f"Playlist updated! 🎉 View it here: https://www.youtube.com/playlist?list={playlist_id}")
-            # after the loop finishes
-            if skipped_songs:
-                with open("skipped_songs.json", "w") as f:
-                    json.dump(skipped_songs, f, indent=2)
-            
-            # Manual save button
-            if st.button("💾 Save Video IDs per Client"):
-                for key_name, ids in vid_ids_per_client.items():
-                    if ids:
-                        filename = f"{key_name}.json"
-                        with open(filename, "w") as f:
-                            json.dump(ids, f, indent=2)
-                        st.success(f"Saved {len(ids)} IDs to {filename}")
-    except:
-        st.warning("⚠️ You are not registered as a 'Test User'")
+                    # ✅ Check for duplicates before adding
+                    if vid not in vid_ids_per_client[key_name]:
+                        add_video(youtube, playlist_id, vid)
+                        vid_ids_per_client[key_name].append(vid)
+                    else:
+                        st.toast(f"Duplicate video ID {vid} for {song} — {artist}. Skipping...")
+                except HttpError as e:
+                    st.toast(f"Insert quota error for client {client_index+1}: {e}. Switching to next client...")
+                    client_index += 1
+                    if client_index >= num_clients:
+                        st.error("🚫 All clients exhausted.")
+                        break
+                    continue
+
+            # Auto-save after each insert
+            filename = f"{key_name}.json"
+            with open(filename, "w") as f:
+                json.dump(vid_ids_per_client[key_name], f, indent=2)
+        
+            progress.progress(int(i+1)/len(choices))
+            progress.text(f"Adding video {i+1}/{len(choices)}: {song} — {artist}")
+        
+        progress.empty()
+        st.success(f"Playlist updated! 🎉 View it here: https://www.youtube.com/playlist?list={playlist_id}")
+        st.markdown(
+                    f"""
+                    <div style="text-align:center;">
+                        <a href="https://www.youtube.com/playlist?list={playlist_id}" target="_blank">
+                            <button style="background-color:#1DB954; border:none; color:white; padding:10px 20px; 
+                                text-align:center; text-decoration:none; display:inline-block; font-size:16px; 
+                                border-radius:20px; cursor:pointer;">
+                                🎬 Open Playlist in YouTube
+                            </button>
+                        </a>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+        
+        # after the loop finishes
+        if skipped_songs:
+            with open("skipped_songs.json", "w") as f:
+                json.dump(skipped_songs, f, indent=2)
+        
+    #except Exception as e:
+    #    st.warning(f"⚠️ You are not registered as a 'Test User': {e}")
     # Banner
     st.divider()
     st.image("static/Livestream_banner.png")

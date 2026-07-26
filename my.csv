@@ -1,0 +1,35 @@
+date,position,song,artist,popularity,duration_ms,album_type,total_tracks,is_explicit,album_cover_url
+18-05-2024,1,Ella Baila Sola,Eslabon Armado,89,165671,album,16,FALSE,https://i.scdn.co/image/ab67616d0000b273dfddf1cb31b85a6d28b7d91f
+18-05-2024,2,Last Night,Morgan Wallen,89,163854,album,36,TRUE,https://i.scdn.co/image/ab67616d0000b273705079df9a25a28b452c1fc9
+18-05-2024,3,All My Life (feat. J. Cole),Lil Durk & J. Cole,84,223878,single,1,TRUE,https://i.scdn.co/image/ab67616d0000b2737c173b0dc64913d4635e3594
+18-05-2024,4,un x100to,Grupo Frontera & Bad Bunny,99,194563,single,1,FALSE,https://i.scdn.co/image/ab67616d0000b273716c0b0ad51594ff788b5f06
+18-05-2024,5,Kill Bill,SZA,94,153946,album,23,FALSE,https://i.scdn.co/image/ab67616d0000b2730c471c36970b9406233842a5
+18-05-2024,6,See You Again (feat. Kali Uchis),"Tyler, The Creator",94,180386,album,14,TRUE,https://i.scdn.co/image/ab67616d0000b2738940ac99f49e44f59e6f7fb3
+18-05-2024,7,Cupid - Twin Ver.,FIFTY FIFTY,97,174253,single,3,FALSE,https://i.scdn.co/image/ab67616d0000b27337c0b3670236c067c8e8bbcb
+18-05-2024,8,La Bebe - Remix,Yng Lvcas & Peso Pluma,99,234352,single,2,TRUE,https://i.scdn.co/image/ab67616d0000b273a04be3ad7c8c67f4109111a9
+18-05-2024,9,Boy's a Liar Pt. 2,PinkPantheress & Ice Spice,96,131013,single,2,FALSE,https://i.scdn.co/image/ab67616d0000b27342c5ba689b2e7cbc208a8fa7
+18-05-2024,10,MATHEMATICAL DISRESPECT,Lil Mabu,84,88304,single,1,TRUE,https://i.scdn.co/image/ab67616d0000b273a56e7dc625146a33a712bef4
+18-05-2024,11,Search & Rescue,Drake,91,272112,single,1,TRUE,https://i.scdn.co/image/ab67616d0000b273cace8a4b2ff924c9e12e3a96
+18-05-2024,12,Area Codes,Kali,83,139325,single,1,TRUE,https://i.scdn.co/image/ab67616d0000b27333a8cd9ae03bc913e6e5af11
+18-05-2024,13,PRC,Peso Pluma & Natanael Cano,96,184066,single,1,TRUE,https://i.scdn.co/image/ab67616d0000b2737be314e2f66a9f7ee732395e
+18-05-2024,14,Flowers,Miley Cyrus,91,200600,album,13,FALSE,https://i.scdn.co/image/ab67616d0000b27358039b5147731b6e52202e46
+18-05-2024,15,Fast Car,Luke Combs,88,265493,album,18,FALSE,https://i.scdn.co/image/ab67616d0000b273ca650d3a95022e0490434ba1
+18-05-2024,16,Cruel Summer,Taylor Swift,92,178426,album,18,FALSE,https://i.scdn.co/image/ab67616d0000b273e787cffec20aa2a396a61647
+18-05-2024,17,You Proof,Morgan Wallen,86,157477,album,36,FALSE,https://i.scdn.co/image/ab67616d0000b273705079df9a25a28b452c1fc9
+18-05-2024,18,SLUT ME OUT,NLE Choppa,75,123672,album,22,TRUE,https://i.scdn.co/image/ab67616d0000b273e61ba4af2bb90a4d414da1dc
+18-05-2024,19,Daylight,David Kushner,96,212953,single,1,FALSE,https://i.scdn.co/image/ab67616d0000b27395ca6a9b4083a86c149934ae
+18-05-2024,20,Anti-Hero,Taylor Swift,94,200690,album,13,FALSE,https://i.scdn.co/image/ab67616d0000b273bb54dde68cd23e2a268ae0f5
+18-05-2024,21,Por las Noches,Peso Pluma,93,239845,single,1,FALSE,https://i.scdn.co/image/ab67616d0000b273427d9aa38866b43ed45f6b0c
+27-11-2025,38,HOT TO GO!,Chappell Roan,88,184841,album,14,FALSE,https://i.scdn.co/image/ab67616d0000b27396fa88fb1789be437d5cb4b6
+27-11-2025,39,Too Sweet,Hozier,84,251424,album,23,FALSE,https://i.scdn.co/image/ab67616d0000b273b07bd43d1bec442c7fcc4d1e
+27-11-2025,40,NIGHTS LIKE THIS,The Kid LAROI,88,86983,album,20,FALSE,https://i.scdn.co/image/ab67616d0000b2732abb30c6296964d5d07458c2
+27-11-2025,41,Fairytale of New York (feat. Kirsty MacColl),The Pogues,68,272466,album,19,FALSE,https://i.scdn.co/image/ab67616d0000b273d0ccf94a2d981db731f5dab8
+27-11-2025,42,Like Him (feat. Lola Young),"Tyler, The Creator",87,278014,album,14,TRUE,https://i.scdn.co/image/ab67616d0000b273124e9249fada4ff3c3a0739c
+27-11-2025,43,Kisses (feat. bbyclose),BL3SS & CamrinWatsin & bbyclose,84,138246,single,1,FALSE,https://i.scdn.co/image/ab67616d0000b2733ba70f49a78d818fc0758667
+27-11-2025,44,Bed Chem,Sabrina Carpenter,90,171869,album,12,FALSE,https://i.scdn.co/image/ab67616d0000b273fd8d7a8d96871e791cb1f626
+27-11-2025,45,Underneath the Tree,Kelly Clarkson,80,229640,album,16,FALSE,https://i.scdn.co/image/ab67616d0000b2739fd0d700bdf33c9ebc42f429
+27-11-2025,46,Dancing Through Life,Wicked Movie Cast & Cynthia Erivo & Ariana Grande,71,587364,album,12,FALSE,https://i.scdn.co/image/ab67616d0000b27341ded89391c5350f6b8f991c
+27-11-2025,47,Nice To Meet You,Myles Smith,80,176000,single,7,FALSE,https://i.scdn.co/image/ab67616d0000b2739ddcb072adff08acd2501a06
+27-11-2025,48,Riptide,Vance Joy,85,204280,album,20,FALSE,https://i.scdn.co/image/ab67616d0000b2737cffb8896928039a0a10e4e7
+27-11-2025,49,Juno,Sabrina Carpenter,88,223192,album,12,TRUE,https://i.scdn.co/image/ab67616d0000b273fd8d7a8d96871e791cb1f626
+27-11-2025,50,Austin (Boots Stop Workin'),Dasha,87,171782,album,8,TRUE,https://i.scdn.co/image/ab67616d0000b2734ccf88b66e04cfd247f287eb

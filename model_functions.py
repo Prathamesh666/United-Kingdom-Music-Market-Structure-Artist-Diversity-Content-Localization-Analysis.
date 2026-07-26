@@ -504,13 +504,45 @@ def build_youtube_description(start_date, end_date, collaboration_choice, select
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-def get_youtube_client(secret_file, port):
-    flow = InstalledAppFlow.from_client_secrets_file(
-        secret_file,
+#def get_youtube_client(secret_file, port):
+#    flow = InstalledAppFlow.from_client_secrets_file(
+#        secret_file,
+#        scopes=["https://www.googleapis.com/auth/youtube"]
+#    )
+#    creds = flow.run_local_server(port=port)
+#    youtube = build("youtube", "v3", credentials=creds)
+#    return youtube
+def get_youtube_client(section, port):
+    creds = st.secrets[section]
+    flow = InstalledAppFlow.from_client_config(
+        {
+            "web": {
+                "client_id": creds["client_id"],
+                "project_id": creds["project_id"],
+                "auth_uri": creds["auth_uri"],
+                "token_uri": creds["token_uri"],
+                "auth_provider_x509_cert_url": creds["auth_provider_x509_cert_url"],
+                "client_secret": creds["client_secret"],
+                "redirect_uris": [
+                    v for k, v in creds.items() if k.startswith("redirect_uri_")
+                ]
+            }
+        },
         scopes=["https://www.googleapis.com/auth/youtube"]
     )
-    creds = flow.run_local_server(port=port)
-    youtube = build("youtube", "v3", credentials=creds)
+
+    try:
+        # Works locally if ports are available
+        credentials = flow.run_local_server(port=port)
+    except Exception as e:
+        st.warning(f"Local server OAuth failed ({e}). Falling back to an alternate flow if available.")
+        run_console = getattr(flow, "run_console", None)
+        if callable(run_console):
+            credentials = run_console()
+        else:
+            raise RuntimeError("OAuth fallback is unavailable in this environment.") from e
+
+    youtube = build("youtube", "v3", credentials=credentials)
     return youtube
 
 def create_playlist(youtube, title, filters):
