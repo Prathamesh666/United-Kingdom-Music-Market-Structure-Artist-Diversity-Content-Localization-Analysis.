@@ -530,7 +530,10 @@ with tab3:
             has_existing = st.checkbox("Already have a playlist? Add tracks to it")
             if has_existing:
                 playlist_id = st.text_input("Enter your existing Spotify Playlist ID:")
-            if playlist_id:
+            playlist_id = None
+            if has_existing:
+                playlist_id = st.text_input("Enter your existing Spotify Playlist ID:")
+            if playlist_id != None:
                 try:
                     create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                                 selected_popularity, is_any_filter_different, playlist_id)
@@ -551,9 +554,10 @@ with tab3:
             
             # Ask if user already has a playlist
             has_existing = st.checkbox("Already have a playlist? Add tracks to it")
+            playlist_id = None
             if has_existing:
                 playlist_id = st.text_input("Enter your existing Spotify Playlist ID:")
-            if playlist_id:
+            if playlist_id != None:
                 try:
                     create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
                                                 selected_popularity, is_any_filter_different, playlist_id)
@@ -576,10 +580,10 @@ with tab3:
     default_name = "🎬 Atlantic Music Videos: Baseline Beats"
 
     # Checkbox to use default
-    use_default = st.checkbox("Use default playlist name", value=True)
+    use_default_name = st.checkbox("Use default playlist name", value=True, key="use_default_name_checkbox")
     
     # If unchecked, show editable text input pre-filled with default
-    if use_default:
+    if use_default_name:
         final_name = default_name
     else:
         final_name = st.text_input("Edit playlist name:", value=default_name)
@@ -606,7 +610,7 @@ with tab3:
             key_name = f"Key_{i}"
             if key_name in st.secrets:
                 api_keys.append(st.secrets[key_name])
-        print(f"Loaded {len(api_keys)} API keys from Streamlit secrets: ",api_keys)
+        print(f"Loaded {len(api_keys)} API keys from Streamlit secrets: ")
         
         songs_per_client = 200   # inserts per OAuth client
         songs_per_key = 100       # searches per API key
