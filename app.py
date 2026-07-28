@@ -17,7 +17,8 @@ from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.mixture import GaussianMixture
 from tqdm.auto import tqdm # For progress_apply
-import warnings
+import json, os, warnings
+from googleapiclient.errors import HttpError
 warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
 warnings.filterwarnings("ignore", message="Accessing `__path__`", module="transformers")
 
@@ -31,19 +32,6 @@ ga_tag = """
         gtag('js', new Date());
         gtag('config', 'G-H7VP3CYEPB');
     </script>
-    
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-M9J42J44');</script>
-    <!-- End Google Tag Manager -->
-    
-    <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M9J42J44"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-    <!-- End Google Tag Manager (noscript) -->
     """
 st.html(ga_tag)
 st.set_page_config(page_icon="🎶", page_title="United Kingdom Music Market Dashboard Analysis", layout="wide", menu_items={ 'About': "Gain a **comprehensive, interactive view** of the UK music industry through dynamic visuals, insightful analytics, and actionable recommendations."})
@@ -279,9 +267,7 @@ except:
     message()
 
 # --- 5. Genre Prediction Function and Application (from Section XV) ---
-# Conceptual definition of major genres
 from huggingface_hub import login
-# Try Streamlit secrets first
 hf_token = st.secrets.get("HF_TOKEN")
 
 if hf_token:
@@ -573,13 +559,8 @@ with tab3:
     
     st.subheader("🎬 UK Music Market Dashboard - YouTube Playlist")
     st.info("Youtube Playlist Is only allowed for Test Users. To become One, please inform me at this mail: prathamesh.b20104546@kccollege.edu.in")
-    import json
-    import os
-    from googleapiclient.errors import HttpError
     
     default_name = "🎬 Atlantic Music Videos: Baseline Beats"
-
-    # Checkbox to use default
     use_default_name = st.checkbox("Use default playlist name", value=True, key="use_default_name_checkbox")
     
     # If unchecked, show editable text input pre-filled with default
@@ -593,17 +574,6 @@ with tab3:
     #try:
     if st.button("🎵 Create YouTube Playlist"):
         
-        # OAuth clients (4 files)
-        client_files = [
-            ".streamlit/client_secret_3.json",
-            ".streamlit/client_secret_4.json",
-            ".streamlit/client_secret_5.json",
-            ".streamlit/client_secret_6.json",
-            ".streamlit/client_secret_7.json",
-            ".streamlit/client_secret_2.json",
-            ".streamlit/client_secret_1.json"
-        ]
-        
         # API keys (14 keys from st.secrets)
         api_keys = []
         for i in range(1, 14):  # 1 through 13
@@ -614,7 +584,7 @@ with tab3:
         
         songs_per_client = 200   # inserts per OAuth client
         songs_per_key = 100       # searches per API key
-        num_clients = len(client_files)
+        num_clients = 7
         num_keys = len(api_keys)
         
         # Load cached IDs if they exist
@@ -630,12 +600,8 @@ with tab3:
         
         skipped_songs = []
         progress = st.progress(0)
-        # Authenticate all clients once at the start
-        #youtube_clients = []
-        #ports = [8502, 8503, 8504, 8505, 8506, 8081, 8501]  # one free port per client 3,4,5,6,7,2,1
-        #for secret_file, port in zip(client_files, ports):
-        #    youtube_clients.append(get_youtube_client(secret_file, port))
         
+        # Authenticate all clients once at the start
         ports = [8505, 8501, 8502, 8503, 8504, 8506, 8081] # 6,2,3,4,5,7,1
         youtube_clients = []
         set_ids = set()
@@ -647,7 +613,7 @@ with tab3:
             if section in st.secrets:
                 youtube_clients.append(get_youtube_client(section, port))
         
-        playlist_id = create_playlist(youtube_clients[0], final_name, filters)    #"PLZ08N3lwKEoc" "PLQJFzcDXdSCc" 610 & 608
+        playlist_id = create_playlist(youtube_clients[0], final_name, filters)
         
         for i, choice in enumerate(choices, start=0):
             # Split "Song — Artist"
@@ -667,10 +633,6 @@ with tab3:
             youtube = youtube_clients[client_index] 
             api_key = api_keys[key_index]
             key_name = f"Vid_ids_client_{client_index+1}"
-        
-            # Skip if already cached
-            if vid_ids_per_client[key_name] and len(vid_ids_per_client[key_name]) >= songs_per_client:
-                continue
         
             try:
                 vid = get_youtube_video_id(song, artist, api_key)
@@ -728,21 +690,15 @@ with tab3:
     #    st.warning(f"⚠️ You are not registered as a 'Test User': {e}")
     # Banner
     st.divider()
-    st.image("static/Livestream_banner.png")
     st.markdown(
         """
         <style>
-        [data-testid="stImage"] img {
-            width: 100% !important;
-            height: auto !important;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
+        [data-testid="stImage"] img { width: 100% !important; height: auto !important; display: block; margin-left: auto; margin-right: auto; }
         </style>
         """,
         unsafe_allow_html=True
     )
+    st.image("static/Livestream_banner.png")
 
 with tab1:
     st.balloons()

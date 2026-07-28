@@ -306,7 +306,6 @@ def load_seen_ids(folder_path="Spotify ids of baseline market"):
         try:
             with open(file_path, "r") as f:
                 uris = json.load(f)
-                # Extract only the ID part after "spotify:track:"
                 ids = {uri.split(":")[-1] for uri in uris}
                 seen_ids.update(ids)
         except FileNotFoundError:
@@ -422,7 +421,7 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
         import json
 
         track_uris = []
-        subset = unique_songs.iloc[666:]   # first 600 songs
+        subset = unique_songs.iloc[666:]
         
         for i, (_, row) in enumerate(subset.iterrows(), start=666):
             track_id = search_spotify_track(
@@ -507,14 +506,6 @@ def build_youtube_description(start_date, end_date, collaboration_choice, select
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-#def get_youtube_client(secret_file, port):
-#    flow = InstalledAppFlow.from_client_secrets_file(
-#        secret_file,
-#        scopes=["https://www.googleapis.com/auth/youtube"]
-#    )
-#    creds = flow.run_local_server(port=port)
-#    youtube = build("youtube", "v3", credentials=creds)
-#    return youtube
 def get_youtube_client(section, port):
     creds = st.secrets[section]
     flow = InstalledAppFlow.from_client_config(
