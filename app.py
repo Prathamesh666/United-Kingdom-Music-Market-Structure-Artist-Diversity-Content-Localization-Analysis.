@@ -638,6 +638,7 @@ with tab3:
         
         ports = [8505, 8501, 8502, 8503, 8504, 8506, 8081] # 6,2,3,4,5,7,1
         youtube_clients = []
+        set_ids = set()
         total_songs = len(choices)
         required_clients = min((total_songs + songs_per_client - 1) // songs_per_client, len(ports))
         num_clients = required_clients  # Update num_clients based on actual usage
@@ -680,9 +681,10 @@ with tab3:
             if vid and vid != "None":
                 try:
                     # ✅ Check for duplicates before adding
-                    if vid not in vid_ids_per_client[key_name]:
+                    if vid not in set_ids and vid not in vid_ids_per_client[key_name]:
                         add_video(youtube, playlist_id, vid)
                         vid_ids_per_client[key_name].append(vid)
+                        set_ids.add(vid)
                     else:
                         st.toast(f"Duplicate video ID {vid} for {song} — {artist}. Skipping...")
                 except HttpError as e:
