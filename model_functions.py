@@ -297,21 +297,24 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     return {"status": "success"}
 
 import json, os
-def load_seen_ids(folder_path="Spotify ids of baseline market"):
-    seen_ids = set()
-    filenames = ["track_uris_day_1.json", "track_uris_day_2.json"]
-
-    for filename in filenames:
-        file_path = os.path.join(folder_path, filename)
-        try:
-            with open(file_path, "r") as f:
-                uris = json.load(f)
-                ids = {uri.split(":")[-1] for uri in uris}
-                seen_ids.update(ids)
-        except FileNotFoundError:
-            # If file doesn't exist, skip it
-            continue
-    print(len(seen_ids), "unique Spotify IDs loaded from baseline market files.")
+def load_seen_ids(folder_path="Atlantic Spotify ids"):
+    try:
+        seen_ids = set()
+        filenames = ["track-uris_Atlantic_day_1.json"]#, "track_uris_day_2.json"]
+    
+        for filename in filenames:
+            file_path = os.path.join(folder_path, filename)
+            try:
+                with open(file_path, "r") as f:
+                    uris = json.load(f)
+                    ids = {uri.split(":")[-1] for uri in uris}
+                    seen_ids.update(ids)
+            except FileNotFoundError:
+                # If file doesn't exist, skip it
+                continue
+        st.toast(f"{len(seen_ids)} unique Spotify IDs loaded from baseline market files.")
+    except:
+        seen_ids = set()
     return seen_ids
 
 def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
@@ -395,7 +398,11 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         #track_uris = []
-        seen_ids =  set() #load_seen_ids()
+        try:
+            seen_ids =  load_seen_ids() #set()
+        except:
+            seen_ids = set()
+            st.toast("Prepared to remove duplicates")
         #total = len(unique_songs)
         #st.caption(f"Scope: {st.session_state.get('scope')}")
         #
@@ -442,15 +449,15 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
             progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
             
         # ✅ Save locally
-        with open("track_uris_US_day_1.json", "w") as f:
+        with open("track_uris_Atlantic_day_2.json", "w") as f:
             json.dump(track_uris, f)
     
-        st.success(f"Saved {len(track_uris)} URIs to track_uris_Atlantic_day1.json")
+        st.success(f"Saved {len(track_uris)} URIs to track-uris_Atlantic_day_2.json")
         # ✅ Provide download button
         st.download_button(
             label="Download Day 2 Track URIs",
             data=json.dumps(track_uris, indent=2),
-            file_name="track-uris_Atlantic_day_1.json",
+            file_name="track-uris_Atlantic_day_2.json",
             mime="application/json"
         )
         
