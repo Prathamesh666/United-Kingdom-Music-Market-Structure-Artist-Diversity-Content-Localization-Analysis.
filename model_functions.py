@@ -297,10 +297,10 @@ def add_tracks_to_playlist(playlist_id, track_uris, token):
     return {"status": "success"}
 
 import json, os
-def load_seen_ids(folder_path="Atlantic Spotify ids"):
+def load_seen_ids(folder_path="Spotify ids of baseline market"):
     try:
         seen_ids = set()
-        filenames = ["track-uris_Atlantic_day_1.json"]#, "track_uris_day_2.json"]
+        filenames = ["track-uris_day_1.json", "track_uris_day_2.json"]
     
         for filename in filenames:
             file_path = os.path.join(folder_path, filename)
@@ -315,6 +315,38 @@ def load_seen_ids(folder_path="Atlantic Spotify ids"):
         st.toast(f"{len(seen_ids)} unique Spotify IDs loaded from baseline market files.")
     except:
         seen_ids = set()
+    return seen_ids
+
+def load_ids(folder_path="YouTube ids of baseline market"):
+    seen_ids = set()
+    
+    try:
+        files = os.listdir(folder_path)
+    except FileNotFoundError:
+        st.toast(f"⚠️ Folder not found: {folder_path}")
+        return seen_ids
+    except Exception as e:
+        st.toast(f"⚠️ Error accessing folder: {e}")
+        return seen_ids
+
+    for filename in files:
+        if filename.endswith(".json"):
+            file_path = os.path.join(folder_path, filename)
+            try:
+                with open(file_path, "r") as f:
+                    ids = json.load(f)
+                    if isinstance(ids, list):
+                        seen_ids.update(ids)
+                    else:
+                        st.toast(f"⚠️ {filename} does not contain a list.")
+            except FileNotFoundError:
+                st.toast(f"⚠️ File not found: {filename}")
+            except json.JSONDecodeError:
+                st.toast(f"⚠️ JSON decode error in {filename}")
+            except Exception as e:
+                st.toast(f"⚠️ Error reading {filename}: {e}")
+
+    st.toast(f"✅ Loaded {len(seen_ids)} unique video IDs from {folder_path}")
     return seen_ids
 
 def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_date, collaboration_choice, selected_album_types, duration_range,
@@ -397,40 +429,16 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
 
         # Add tracks
         progress_text.text("⏳ Step 3/3: Adding tracks...")
-        #track_uris = []
+        track_uris = []
         try:
             seen_ids =  load_seen_ids() #set()
         except:
             seen_ids = set()
             st.toast("Prepared to remove duplicates")
-        #total = len(unique_songs)
-        #st.caption(f"Scope: {st.session_state.get('scope')}")
-        #
-        #for i, (_, row) in enumerate(unique_songs.iloc[:666].iterrows()):
-        #    track_id = search_spotify_track(
-        #        row["song"], row["artist"],
-        #        {"Authorization": f"Bearer {access_token}"}
-        #    )
-        #    
-        #    if track_id:  
-        #        spotify_id = track_id[0]
-        #        if spotify_id not in seen_ids:   # ✅ only add if not seen
-        #            track_uris.append(f"spotify:track:{spotify_id}")
-        #            seen_ids.add(spotify_id)
-        #        else:
-        #            st.info(f"Skipping duplicate track: {row['song']} — {row['artist']}")
-        #
-        #    # update progress bar gradually
-        #    percent_complete = 40 + int(60 * (i+1)/total)
-        #    progress_bar.progress(percent_complete)
-        #    progress_text.text(f"Searching track {i+1}/{total}...")
-            
-        import json
-
-        track_uris = []
-        subset = unique_songs.iloc[666:]
+        total = len(unique_songs)
+        st.caption(f"Scope: {st.session_state.get('scope')}")
         
-        for i, (_, row) in enumerate(subset.iterrows(), start=666):
+        for i, (_, row) in enumerate(unique_songs.iloc[:666].iterrows()):
             track_id = search_spotify_track(
                 row["song"], row["artist"],
                 {"Authorization": f"Bearer {access_token}"}
@@ -442,11 +450,34 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
                     track_uris.append(f"spotify:track:{spotify_id}")
                     seen_ids.add(spotify_id)
                 else:
-                    st.toast(f"Skipping duplicate track: {row['song']} — {row['artist']}")
-            
-            percent_complete = int(100 * (i-666)/len(subset))
+                    st.info(f"Skipping duplicate track: {row['song']} — {row['artist']}")
+        
+            # update progress bar gradually
+            percent_complete = 40 + int(60 * (i+1)/total)
             progress_bar.progress(percent_complete)
-            progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
+            progress_text.text(f"Searching track {i+1}/{total}...")
+            
+        #import json
+        #track_uris = []
+        #subset = unique_songs.iloc[666:]
+        #
+        #for i, (_, row) in enumerate(subset.iterrows(), start=666):
+        #    track_id = search_spotify_track(
+        #        row["song"], row["artist"],
+        #        {"Authorization": f"Bearer {access_token}"}
+        #    )
+        #    
+        #    if track_id:  
+        #        spotify_id = track_id[0]
+        #        if spotify_id not in seen_ids:   # ✅ only add if not seen
+        #            track_uris.append(f"spotify:track:{spotify_id}")
+        #            seen_ids.add(spotify_id)
+        #        else:
+        #            st.toast(f"Skipping duplicate track: {row['song']} — {row['artist']}")
+        #    
+        #    percent_complete = int(100 * (i-666)/len(subset))
+        #    progress_bar.progress(percent_complete)
+        #    progress_text.text(f"Searching track {i}/{len(unique_songs)}...")
             
         # ✅ Save locally
         with open("track_uris_Atlantic_day_2.json", "w") as f:
