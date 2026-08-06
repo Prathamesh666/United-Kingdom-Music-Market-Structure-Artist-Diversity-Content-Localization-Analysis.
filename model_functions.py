@@ -300,7 +300,7 @@ import json, os
 def load_seen_ids(folder_path="Spotify ids of baseline market"):
     try:
         seen_ids = set()
-        filenames = ["track-uris_day_1.json", "track_uris_day_2.json"]
+        filenames = ["track_uris_day_1.json", "track_uris_day_2.json"]
     
         for filename in filenames:
             file_path = os.path.join(folder_path, filename)
