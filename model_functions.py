@@ -421,7 +421,7 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
             if "id" not in playlist:
                 st.error(f"Failed to create playlist: {playlist}")
                 return
-            playlist_id = "3JeZAwR79rBQzFdBnEBEnt" #playlist["id"]
+            playlist_id = playlist["id"]
         else:
             progress_text.text("🎶 Step 2/3: Creating playlist...")
             st.toast(f"Using existing playlist ID: {playlist_id}")
@@ -450,7 +450,7 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
                     track_uris.append(f"spotify:track:{spotify_id}")
                     seen_ids.add(spotify_id)
                 else:
-                    st.info(f"Skipping duplicate track: {row['song']} — {row['artist']}")
+                    st.toast(f"Skipping duplicate track: {row['song']} — {row['artist']}")
         
             # update progress bar gradually
             percent_complete = 40 + int(60 * (i+1)/total)
