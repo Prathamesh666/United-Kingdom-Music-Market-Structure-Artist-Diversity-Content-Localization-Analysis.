@@ -150,7 +150,9 @@ def search_spotify_track(song, artist, headers):
         retry_after_hours = float(retry_after_min/60)
         st.error(f"🚫 Spotify rate limit hit. Redirecting you to the already created playlist of baseline market instead [Retry after {retry_after_min} minutes ({retry_after_hours} hours)....]")
         default_playlist_url = "https://open.spotify.com/playlist/4ar8iua1eZDmraYonUQDC0"
-        st.success(f"🎶 [Open Playlist]({default_playlist_url})")
+        st.success("🎶 [Open Atlantic Spotify Playlist](https://open.spotify.com/playlist/3JeZAwR79rBQzFdBnEBEnt)")
+        st.success(f"🎶 [Open Atlantic UK Spotify Playlist]({default_playlist_url})")
+        st.success("🎶 [Open Atlantic US Spotify Playlist](https://open.spotify.com/playlist/7n5onWFe08lAOe8UsiGgNu)")
         st.session_state['playlist_disabled'] = True
         response = requests.get(url, headers=headers)
     if response.status_code != 200:
@@ -197,7 +199,9 @@ def get_youtube_video_id(song: str, artist: str, api_key: str) -> str:
         col_audio, col_video = st.columns([1,2.25])
         with col_video:
             st.error(f"🚫 YouTube API error for {song} by {artist}. Redirecting you to the already created YouTube playlist of baseline market instead.")
-            st.success("🎬 [Open YouTube Playlist](https://youtube.com/playlist?list=PLCvr4P68U0Ps&si=GUGnlGo8QHt2UID4)")
+            st.success("🎬 [Open Atlantic YouTube Playlist](https://www.youtube.com/playlist?list=PLBChOhhsjajo&si=GUGnlGo8QHt2UID4)")
+            st.success("🎬 [Open Atlantic UK YouTube Playlist](https://youtube.com/playlist?list=PLCvr4P68U0Ps&si=GUGnlGo8QHt2UID4)")
+            st.success("🎬 [Open Atlantic US YouTube Playlist](https://www.youtube.com/playlist?list=PLUCi8yB4-YJA&si=GUGnlGo8QHt2UID4)")
     return "None"
 
 REDIRECT_URI = "https://um-unitedkingdommusicmarketanalysisdashboard.streamlit.app/"

@@ -443,6 +443,10 @@ with tab3:
                 st.video(f"https://www.youtube.com/watch?v={video_id}")
             else:
                 st.warning("No official video found at instance. Try again later!")
+                st.error(f"🚫 Redirecting you to the already created YouTube playlists of baseline market instead.")
+                st.success("🎬 [Open Atlantic YouTube Playlist](https://www.youtube.com/playlist?list=PLBChOhhsjajo&si=GUGnlGo8QHt2UID4)")
+                st.success("🎬 [Open Atlantic UK YouTube Playlist](https://youtube.com/playlist?list=PLCvr4P68U0Ps&si=GUGnlGo8QHt2UID4)")
+                st.success("🎬 [Open Atlantic US YouTube Playlist](https://www.youtube.com/playlist?list=PLUCi8yB4-YJA&si=GUGnlGo8QHt2UID4)")
         else:
             st.warning("YouTube API key not configured.")
 
@@ -466,6 +470,9 @@ with tab3:
                     st.audio(preview_url, format="audio/mp3")
     except:
         st.warning("Try again later: Bad Luck")
+        st.success("🎶 [Open Atlantic Spotify Playlist](https://open.spotify.com/playlist/3JeZAwR79rBQzFdBnEBEnt)")
+        st.success("🎶 [Open Atlantic UK Spotify Playlist](https://open.spotify.com/playlist/4ar8iua1eZDmraYonUQDC0)")
+        st.success("🎶 [Open Atlantic US Spotify Playlist](https://open.spotify.com/playlist/7n5onWFe08lAOe8UsiGgNu)")
 
     st.divider()
     st.subheader("📀 Create a Spotify Playlist")
