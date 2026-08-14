@@ -370,11 +370,27 @@ unique_songs = (
 # 📂 Save to CSV
 #output_folder = "saved_songs"
 #os.makedirs(output_folder, exist_ok=True)  # create folder if missing
-#file_path = os.path.join(output_folder, "unique_songs.csv")
+#file_path = os.path.join(output_folder, "unique_songs_uk.csv")
 #
 #unique_songs.to_csv(file_path, index=False, encoding="utf-8")
+
+#unique_songs = pd.read_csv("saved_songs/unique_songs.csv")
+#unique_songs_uk = pd.read_csv("saved_songs/unique_songs_uk.csv")
+#
+## Normalize song names to avoid case/whitespace mismatches
+#unique_songs["song_norm"] = unique_songs["song"].str.strip().str.lower()
+#unique_songs_uk["song_norm"] = unique_songs_uk["song"].str.strip().str.lower()
+#
+## Filter songs that are in unique_songs but not in unique_songs_uk
+#diff_songs = unique_songs[~unique_songs["song_norm"].isin(unique_songs_uk["song_norm"])]
+#
+## Drop helper column if you don’t want it in the final output
+#diff_songs = diff_songs.drop(columns=["song_norm"])
+#
+## Save the difference to a new CSV
+#diff_songs.to_csv("saved_songs/unique_songs_difference.csv", index=False, encoding="utf-8")
 # 📂 Load unique_songs from CSV
-file_path = "saved_songs/unique_songs.csv"
+file_path = "saved_songs/unique_songs_difference.csv"
 unique_songs = pd.read_csv(file_path)
 try:
     if not is_any_filter_different:
