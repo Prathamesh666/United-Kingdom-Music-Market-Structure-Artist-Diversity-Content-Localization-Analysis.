@@ -458,16 +458,6 @@ with tab3:
     selected = st.selectbox("🎶 Choose a song to play:", choices)   
     row = filtered[filtered.apply(lambda r: f"{r['song']} — {r['artist']}", axis=1) == selected].iloc[0]
     
-    
-    # 📂 Save choices to local folder as CSV
-    #output_folder = "saved_choices"
-    #os.makedirs(output_folder, exist_ok=True)  # create folder if missing C:\Users\Public\Documents\UM_Internship\UK_Playlist_Project\app.py
-    #file_path = os.path.join(output_folder, "choices_states.csv")
-    #
-    ## Convert Series to DataFrame and save
-    #choices_df = pd.DataFrame(choices, columns=["Song — Artist"])
-    #choices_df.to_csv(file_path, index=False, encoding="utf-8")
-    
     song, artist = selected.split(" — ")
 
     # Two-column layout for Spotify + YouTube
