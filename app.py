@@ -421,12 +421,28 @@ with tab3:
             st.warning("Song is not from the United Kingdom's dataset")
     else:
         filtered = unique_songs
-
+    
     # Dropdown
     choices = filtered.sort_values(by="song").apply(lambda r: f"{r['song']} — {r['artist']}", axis=1)
+    # 📂 Load choices from CSV
+    file_path = "saved_choices/choices_states.csv"
+    choices_df = pd.read_csv(file_path)
+    
+    # Convert back to Series (or list) for Streamlit selectbox
+    choices = choices_df["Song — Artist"].tolist()
     st.success(f"Total Songs: {len(choices)}")
     selected = st.selectbox("🎶 Choose a song to play:", choices)   
     row = filtered[filtered.apply(lambda r: f"{r['song']} — {r['artist']}", axis=1) == selected].iloc[0]
+    
+    
+    # 📂 Save choices to local folder as CSV
+    #output_folder = "saved_choices"
+    #os.makedirs(output_folder, exist_ok=True)  # create folder if missing C:\Users\Public\Documents\UM_Internship\UK_Playlist_Project\app.py
+    #file_path = os.path.join(output_folder, "choices_states.csv")
+    #
+    ## Convert Series to DataFrame and save
+    #choices_df = pd.DataFrame(choices, columns=["Song — Artist"])
+    #choices_df.to_csv(file_path, index=False, encoding="utf-8")
     
     song, artist = selected.split(" — ")
 
