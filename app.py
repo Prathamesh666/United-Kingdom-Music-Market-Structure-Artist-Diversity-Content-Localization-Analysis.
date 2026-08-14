@@ -367,7 +367,15 @@ unique_songs = (
     })
     .reset_index(drop=True)
 )
-
+# 📂 Save to CSV
+#output_folder = "saved_songs"
+#os.makedirs(output_folder, exist_ok=True)  # create folder if missing
+#file_path = os.path.join(output_folder, "unique_songs.csv")
+#
+#unique_songs.to_csv(file_path, index=False, encoding="utf-8")
+# 📂 Load unique_songs from CSV
+file_path = "saved_songs/unique_songs.csv"
+unique_songs = pd.read_csv(file_path)
 try:
     if not is_any_filter_different:
         st.session_state["baseline_total"] = len(unique_songs)
