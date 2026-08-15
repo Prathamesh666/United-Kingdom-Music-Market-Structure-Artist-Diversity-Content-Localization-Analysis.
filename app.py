@@ -611,7 +611,7 @@ with tab3:
         # Authenticate all clients once at the start
         ports = [8505, 8501, 8502, 8503, 8504, 8506, 8081] # 6,2,3,4,5,7,1
         youtube_clients = []
-        set_ids = load_ids() #set()
+        set_ids = set() #load_ids()
         total_songs = len(choices)
         required_clients = min((total_songs + songs_per_client - 1) // songs_per_client, len(ports))
         num_clients = required_clients  # Update num_clients based on actual usage
