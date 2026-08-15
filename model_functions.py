@@ -155,6 +155,7 @@ def search_spotify_track(song, artist, headers):
         st.success("🎶 [Open Atlantic US Spotify Playlist](https://open.spotify.com/playlist/7n5onWFe08lAOe8UsiGgNu)")
         st.session_state['playlist_disabled'] = True
         response = requests.get(url, headers=headers)
+        return None
     if response.status_code != 200:
         print("Spotify API error:", response.status_code, response.text)
         return None
@@ -435,7 +436,7 @@ def create_playlist_from_dataframe(playlist_name, unique_songs, start_date, end_
         progress_text.text("⏳ Step 3/3: Adding tracks...")
         track_uris = []
         try:
-            seen_ids =  load_seen_ids() #set()
+            seen_ids =  set() #load_seen_ids()
         except:
             seen_ids = set()
             st.toast("Prepared to remove duplicates")
