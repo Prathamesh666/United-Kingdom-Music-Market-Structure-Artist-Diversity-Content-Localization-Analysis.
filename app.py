@@ -448,12 +448,6 @@ with tab3:
     
     # Dropdown
     choices = filtered.sort_values(by="song").apply(lambda r: f"{r['song']} — {r['artist']}", axis=1)
-    # 📂 Load choices from CSV
-    file_path = "saved_choices/choices_states.csv"
-    choices_df = pd.read_csv(file_path)
-    
-    # Convert back to Series (or list) for Streamlit selectbox
-    choices = choices_df["Song — Artist"].tolist()
     st.success(f"Total Songs: {len(choices)}")
     selected = st.selectbox("🎶 Choose a song to play:", choices)   
     row = filtered[filtered.apply(lambda r: f"{r['song']} — {r['artist']}", axis=1) == selected].iloc[0]
